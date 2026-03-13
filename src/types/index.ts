@@ -1,4 +1,4 @@
-export type SubmissionStatus = 'draft' | 'submitted' | 'processing' | 'completed'
+export type SubmissionStatus = 'draft' | 'pending' | 'under_review' | 'approved'
 export type CompanyType = 'mei' | 'ltda'
 
 export interface Partner {

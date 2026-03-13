@@ -21,22 +21,38 @@ import {
 } from '@/components/ui/select'
 import { useAppStore } from '@/store/AppContext'
 import { ShareFormDialog } from '@/components/share/ShareFormDialog'
+import { EmailSettingsDialog } from '@/components/admin/EmailSettingsDialog'
+import { SubmissionStatus } from '@/types'
 
 const getStatusBadge = (status: string) => {
   switch (status) {
-    case 'completed':
-      return <Badge className="bg-success text-success-foreground">Concluído</Badge>
-    case 'submitted':
-      return <Badge variant="default">Enviado</Badge>
-    case 'processing':
-      return <Badge variant="secondary">Processando</Badge>
+    case 'approved':
+      return <Badge className="bg-green-600 hover:bg-green-700 text-white">Aprovado</Badge>
+    case 'under_review':
+      return <Badge className="bg-amber-500 hover:bg-amber-600 text-white">Em análise</Badge>
+    case 'pending':
+      return <Badge className="bg-slate-500 hover:bg-slate-600 text-white">Pendente</Badge>
+    case 'draft':
     default:
       return <Badge variant="outline">Rascunho</Badge>
   }
 }
 
+const getStatusLabel = (status: string) => {
+  switch (status) {
+    case 'approved':
+      return 'Aprovado'
+    case 'under_review':
+      return 'Em análise'
+    case 'pending':
+      return 'Pendente'
+    default:
+      return 'Rascunho'
+  }
+}
+
 export default function SubmissionsList() {
-  const { submissions } = useAppStore()
+  const { submissions, updateSubmission } = useAppStore()
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
 
@@ -69,7 +85,7 @@ export default function SubmissionsList() {
       return [
         s.protocol,
         s.clientName,
-        s.status,
+        getStatusLabel(s.status),
         new Date(s.createdAt).toLocaleDateString('pt-BR'),
         s.company?.type?.toUpperCase() || '-',
         companyName,
@@ -111,6 +127,7 @@ export default function SubmissionsList() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <EmailSettingsDialog />
           <Button variant="outline" onClick={handleExportCSV} className="w-full md:w-auto">
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
@@ -138,9 +155,9 @@ export default function SubmissionsList() {
             <SelectContent>
               <SelectItem value="all">Todos Status</SelectItem>
               <SelectItem value="draft">Rascunho</SelectItem>
-              <SelectItem value="submitted">Enviado</SelectItem>
-              <SelectItem value="processing">Processando</SelectItem>
-              <SelectItem value="completed">Concluído</SelectItem>
+              <SelectItem value="pending">Pendente</SelectItem>
+              <SelectItem value="under_review">Em análise</SelectItem>
+              <SelectItem value="approved">Aprovado</SelectItem>
             </SelectContent>
           </Select>
         </div>
@@ -193,7 +210,24 @@ export default function SubmissionsList() {
                       </div>
                     </TableCell>
                     <TableCell>{new Date(sub.createdAt).toLocaleDateString('pt-BR')}</TableCell>
-                    <TableCell>{getStatusBadge(sub.status)}</TableCell>
+                    <TableCell>
+                      <Select
+                        value={sub.status}
+                        onValueChange={(val) =>
+                          updateSubmission(sub.id, { status: val as SubmissionStatus })
+                        }
+                      >
+                        <SelectTrigger className="w-[140px] h-9 border-none bg-transparent shadow-none p-0 focus:ring-0">
+                          {getStatusBadge(sub.status)}
+                        </SelectTrigger>
+                        <SelectContent>
+                          <SelectItem value="draft">Rascunho</SelectItem>
+                          <SelectItem value="pending">Pendente</SelectItem>
+                          <SelectItem value="under_review">Em análise</SelectItem>
+                          <SelectItem value="approved">Aprovado</SelectItem>
+                        </SelectContent>
+                      </Select>
+                    </TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
                         <ShareFormDialog id={sub.id}>

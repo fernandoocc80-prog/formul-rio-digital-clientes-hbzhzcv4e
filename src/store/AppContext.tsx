@@ -3,9 +3,11 @@ import { Submission } from '@/types'
 
 interface AppState {
   submissions: Submission[]
+  emailTemplate: string
   addSubmission: (sub: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => string
   updateSubmission: (id: string, data: Partial<Submission>) => void
   getSubmission: (id: string) => Submission | undefined
+  updateEmailTemplate: (template: string) => void
 }
 
 const mockData: Submission[] = [
@@ -13,7 +15,7 @@ const mockData: Submission[] = [
     id: 'sub-1',
     protocol: '2023-10-15-0001',
     clientName: 'Tech Nova Solutions',
-    status: 'completed',
+    status: 'approved',
     createdAt: '2023-10-15T10:00:00Z',
     updatedAt: '2023-10-16T10:00:00Z',
     partners: [
@@ -65,7 +67,7 @@ const mockData: Submission[] = [
     id: 'sub-2',
     protocol: '2023-10-20-0002',
     clientName: 'Carlos Roberto (MEI)',
-    status: 'submitted',
+    status: 'pending',
     createdAt: '2023-10-20T14:30:00Z',
     updatedAt: '2023-10-20T14:30:00Z',
     partners: [],
@@ -93,6 +95,7 @@ const mockData: Submission[] = [
 
 const AppContext = createContext<AppState | undefined>(undefined)
 const LOCAL_STORAGE_KEY = 'empresaflow_submissions_v1'
+const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [submissions, setSubmissions] = useState<Submission[]>(() => {
@@ -105,12 +108,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return mockData
   })
 
-  // Persist to localStorage whenever submissions change
+  const [emailTemplate, setEmailTemplate] = useState(() => {
+    return (
+      localStorage.getItem(EMAIL_TEMPLATE_KEY) ||
+      'Olá {nome},\n\nRecebemos sua solicitação de abertura de empresa com sucesso!\n\nSeu número de protocolo é: {protocolo}\n\nNossa equipe está analisando os dados e documentos enviados. Em breve, você receberá atualizações sobre o andamento do processo.\n\nAtenciosamente,\nEquipe EmpresaFlow'
+    )
+  })
+
   useEffect(() => {
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(submissions))
   }, [submissions])
 
-  // Listen for storage changes from other tabs to ensure real-time list sync
+  useEffect(() => {
+    localStorage.setItem(EMAIL_TEMPLATE_KEY, emailTemplate)
+  }, [emailTemplate])
+
   useEffect(() => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === LOCAL_STORAGE_KEY && e.newValue) {
@@ -119,6 +131,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         } catch (err) {
           console.error('Error parsing synced data', err)
         }
+      }
+      if (e.key === EMAIL_TEMPLATE_KEY && e.newValue) {
+        setEmailTemplate(e.newValue)
       }
     }
     window.addEventListener('storage', handleStorageChange)
@@ -146,7 +161,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     setSubmissions((prev) => [newSubmission, ...prev])
 
-    // Broadcast a targeted alert to any active admin tabs
     try {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
@@ -166,8 +180,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const getSubmission = (id: string) => submissions.find((s) => s.id === id)
 
+  const updateEmailTemplate = (template: string) => setEmailTemplate(template)
+
   return (
-    <AppContext.Provider value={{ submissions, addSubmission, updateSubmission, getSubmission }}>
+    <AppContext.Provider
+      value={{
+        submissions,
+        emailTemplate,
+        addSubmission,
+        updateSubmission,
+        getSubmission,
+        updateEmailTemplate,
+      }}
+    >
       {children}
     </AppContext.Provider>
   )

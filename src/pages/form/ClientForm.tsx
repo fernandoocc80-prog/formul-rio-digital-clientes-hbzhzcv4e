@@ -133,7 +133,7 @@ export default function ClientForm() {
   const handleSubmit = () => {
     const data = {
       clientName: clientName || company.tradeName || company.suggestedName1 || 'Cliente Novo',
-      status: 'submitted' as const,
+      status: 'pending' as const,
       company,
       partners: company.type === 'mei' ? [] : partners,
       activity,
