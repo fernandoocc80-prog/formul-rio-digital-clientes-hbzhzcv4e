@@ -93,7 +93,7 @@ export function SignatureStep({ signature, onChange }: Props) {
       </div>
       <Card>
         <CardContent className="p-6">
-          <div className="border-2 border-dashed border-input rounded-lg overflow-hidden bg-slate-50 touch-none relative">
+          <div className="border-2 border-dashed border-input rounded-lg overflow-hidden bg-white touch-none relative">
             <canvas
               ref={canvasRef}
               width={600}
@@ -110,7 +110,7 @@ export function SignatureStep({ signature, onChange }: Props) {
             />
             {!signature && !isDrawing && (
               <div className="absolute inset-0 pointer-events-none flex items-center justify-center">
-                <p className="text-muted-foreground/50 font-medium select-none">Assine aqui</p>
+                <p className="text-slate-400 font-medium select-none">Assine aqui</p>
               </div>
             )}
           </div>

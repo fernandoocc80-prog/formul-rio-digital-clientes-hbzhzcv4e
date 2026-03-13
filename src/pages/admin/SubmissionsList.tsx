@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Share2 } from 'lucide-react'
+import { Eye, Share2, Download } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -46,6 +46,61 @@ export default function SubmissionsList() {
     return true
   })
 
+  const handleExportCSV = () => {
+    const headers = [
+      'Protocolo',
+      'Cliente',
+      'Status',
+      'Data de Criação',
+      'Tipo de Empresa',
+      'Nome Fantasia / Razão Social',
+      'Email',
+      'Telefone',
+      'Qtd Sócios',
+      'Docs Anexados',
+    ]
+
+    const rows = filtered.map((s) => {
+      const companyName = s.company?.tradeName || s.company?.suggestedName1 || 'Não informado'
+      const docsCount = `${s.documents?.filter((d) => d.fileName).length || 0}/${
+        s.documents?.length || 0
+      }`
+
+      return [
+        s.protocol,
+        s.clientName,
+        s.status,
+        new Date(s.createdAt).toLocaleDateString('pt-BR'),
+        s.company?.type?.toUpperCase() || '-',
+        companyName,
+        s.company?.email || '-',
+        s.company?.phone || '-',
+        s.partners?.length || 0,
+        docsCount,
+      ]
+    })
+
+    const csvContent = [
+      headers.join(','),
+      ...rows.map((row) => row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(',')),
+    ].join('\n')
+
+    const blob = new Blob([new Uint8Array([0xef, 0xbb, 0xbf]), csvContent], {
+      type: 'text/csv;charset=utf-8;',
+    })
+    const url = URL.createObjectURL(blob)
+    const link = document.createElement('a')
+    link.href = url
+    link.setAttribute(
+      'download',
+      `exportacao-formularios-${new Date().toISOString().split('T')[0]}.csv`,
+    )
+    document.body.appendChild(link)
+    link.click()
+    document.body.removeChild(link)
+    URL.revokeObjectURL(url)
+  }
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
@@ -56,6 +111,10 @@ export default function SubmissionsList() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <Button variant="outline" onClick={handleExportCSV} className="w-full md:w-auto">
+            <Download className="h-4 w-4 mr-2" />
+            Exportar CSV
+          </Button>
           <ShareFormDialog id="new">
             <Button variant="outline" className="w-full md:w-auto">
               <Share2 className="h-4 w-4 mr-2" />

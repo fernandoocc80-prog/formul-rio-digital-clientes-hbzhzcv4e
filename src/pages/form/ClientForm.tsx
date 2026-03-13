@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronRight, ChevronLeft, Check } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, Moon, Sun, Building2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/hooks/use-toast'
@@ -31,6 +31,7 @@ export default function ClientForm() {
   const { toast } = useToast()
   const { addSubmission, updateSubmission, getSubmission } = useAppStore()
 
+  const [isDark, setIsDark] = useState(false)
   const [currentStepId, setCurrentStepId] = useState('company')
 
   const [clientName, setClientName] = useState('')
@@ -54,6 +55,13 @@ export default function ClientForm() {
   })
   const [documents, setDocuments] = useState<DocumentItem[]>(DEFAULT_DOCS)
   const [signature, setSignature] = useState('')
+
+  useEffect(() => {
+    if (isDark) document.documentElement.classList.add('dark')
+    else document.documentElement.classList.remove('dark')
+
+    return () => document.documentElement.classList.remove('dark')
+  }, [isDark])
 
   useEffect(() => {
     if (id && id !== 'new') {
@@ -153,7 +161,25 @@ export default function ClientForm() {
   const progress = ((currentIndex + 1) / visibleSteps.length) * 100
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4">
+    <div className="max-w-3xl mx-auto py-8 px-4 transition-colors">
+      <div className="flex items-center justify-between mb-8 border-b border-border pb-4">
+        <h1 className="text-xl font-bold text-primary flex items-center gap-2">
+          <Building2 className="w-6 h-6" /> EmpresaFlow
+        </h1>
+        <Button
+          variant="ghost"
+          size="icon"
+          onClick={() => setIsDark(!isDark)}
+          className="rounded-full hover:bg-muted"
+        >
+          {isDark ? (
+            <Sun className="w-5 h-5 text-yellow-400" />
+          ) : (
+            <Moon className="w-5 h-5 text-slate-600" />
+          )}
+        </Button>
+      </div>
+
       <div className="mb-8 hidden sm:block">
         <Progress value={progress} className="h-2 mb-2" />
         <div className="flex justify-between text-xs text-muted-foreground font-medium">
@@ -196,7 +222,7 @@ export default function ClientForm() {
         )}
       </div>
 
-      <div className="flex justify-between pt-8 border-t mt-8">
+      <div className="flex justify-between pt-8 border-t border-border mt-8">
         <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
           <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
         </Button>

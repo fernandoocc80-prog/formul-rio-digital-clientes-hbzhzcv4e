@@ -1,4 +1,4 @@
-import React, { createContext, useContext, useState, ReactNode } from 'react'
+import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
 import { Submission } from '@/types'
 
 interface AppState {
@@ -92,9 +92,38 @@ const mockData: Submission[] = [
 ]
 
 const AppContext = createContext<AppState | undefined>(undefined)
+const LOCAL_STORAGE_KEY = 'empresaflow_submissions_v1'
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [submissions, setSubmissions] = useState<Submission[]>(mockData)
+  const [submissions, setSubmissions] = useState<Submission[]>(() => {
+    try {
+      const saved = localStorage.getItem(LOCAL_STORAGE_KEY)
+      if (saved) return JSON.parse(saved)
+    } catch (e) {
+      console.warn('Could not read from local storage', e)
+    }
+    return mockData
+  })
+
+  // Persist to localStorage whenever submissions change
+  useEffect(() => {
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(submissions))
+  }, [submissions])
+
+  // Listen for storage changes from other tabs to ensure real-time list sync
+  useEffect(() => {
+    const handleStorageChange = (e: StorageEvent) => {
+      if (e.key === LOCAL_STORAGE_KEY && e.newValue) {
+        try {
+          setSubmissions(JSON.parse(e.newValue))
+        } catch (err) {
+          console.error('Error parsing synced data', err)
+        }
+      }
+    }
+    window.addEventListener('storage', handleStorageChange)
+    return () => window.removeEventListener('storage', handleStorageChange)
+  }, [])
 
   const addSubmission = (data: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => {
     const newId = `sub-${Math.random().toString(36).substring(2, 9)}`
@@ -116,6 +145,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     setSubmissions((prev) => [newSubmission, ...prev])
+
+    // Broadcast a targeted alert to any active admin tabs
+    try {
+      const channel = new BroadcastChannel('empresaflow_notifications')
+      channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
+      channel.close()
+    } catch (e) {
+      console.warn('BroadcastChannel not supported', e)
+    }
+
     return newId
   }
 

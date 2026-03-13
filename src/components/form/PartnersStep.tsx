@@ -93,7 +93,7 @@ export function PartnersStep({ partners, onChange }: Props) {
           </Card>
         ))}
         {partners.length === 0 && (
-          <div className="text-center p-8 border border-dashed rounded-lg bg-slate-50">
+          <div className="text-center p-8 border border-dashed rounded-lg bg-muted/50">
             <p className="text-muted-foreground mb-4">Nenhum sócio adicionado.</p>
             <Button onClick={addPartner}>Adicionar Primeiro Sócio</Button>
           </div>
