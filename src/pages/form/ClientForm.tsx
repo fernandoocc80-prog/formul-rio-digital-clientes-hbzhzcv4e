@@ -17,6 +17,12 @@ const DEFAULT_DOCS: DocumentItem[] = [
   { id: 'rg', label: 'Documento de Identidade (RG/CNH)' },
   { id: 'residencia', label: 'Comprovante de Residência' },
   { id: 'iptu', label: 'Capa do IPTU (Endereço Comercial)' },
+  {
+    id: 'posse',
+    label:
+      'documento que comprove a posse ou a propriedade regular do empresário no imóvel aonde será estabelecida a empresa',
+  },
+  { id: 'casamento', label: 'certidão de casamento' },
 ]
 
 export default function ClientForm() {
@@ -57,22 +63,25 @@ export default function ClientForm() {
         setCompany(existing.company || company)
         setPartners(existing.partners || [])
         setActivity(existing.activity || activity)
-        setDocuments(existing.documents?.length ? existing.documents : DEFAULT_DOCS)
+
+        const mergedDocs = [...(existing.documents || [])]
+        DEFAULT_DOCS.forEach((d) => !mergedDocs.some((x) => x.id === d.id) && mergedDocs.push(d))
+        setDocuments(mergedDocs.length ? mergedDocs : DEFAULT_DOCS)
+
         setSignature(existing.signature || '')
       }
     }
   }, [id])
 
   const visibleSteps = useMemo(() => {
-    const steps = [
+    return [
       { id: 'company', label: 'Empresa' },
       { id: 'partners', label: 'Sócios', hideIf: company.type === 'mei' },
       { id: 'activity', label: 'Atividades' },
       { id: 'documents', label: 'Documentos' },
       { id: 'signature', label: 'Assinatura' },
       { id: 'review', label: 'Revisão' },
-    ]
-    return steps.filter((s) => !s.hideIf)
+    ].filter((s) => !s.hideIf)
   }, [company.type])
 
   let currentIndex = visibleSteps.findIndex((s) => s.id === currentStepId)
