@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Copy, Share2 } from 'lucide-react'
+import { Eye, Share2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -20,7 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAppStore } from '@/store/AppContext'
-import { useToast } from '@/hooks/use-toast'
+import { ShareFormDialog } from '@/components/share/ShareFormDialog'
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -37,7 +37,6 @@ const getStatusBadge = (status: string) => {
 
 export default function SubmissionsList() {
   const { submissions } = useAppStore()
-  const { toast } = useToast()
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
 
@@ -46,15 +45,6 @@ export default function SubmissionsList() {
     if (typeFilter !== 'all' && s.company?.type !== typeFilter) return false
     return true
   })
-
-  const handleCopyLink = (id: string = 'new') => {
-    const url = `https://formulario-digital-clientes-38ac0.goskip.app/form/${id}`
-    navigator.clipboard.writeText(url).then(() => {
-      toast({
-        description: 'Link copiado com sucesso!',
-      })
-    })
-  }
 
   return (
     <div className="space-y-6">
@@ -66,14 +56,12 @@ export default function SubmissionsList() {
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
-          <Button
-            variant="outline"
-            onClick={() => handleCopyLink('new')}
-            className="w-full md:w-auto"
-          >
-            <Share2 className="h-4 w-4 mr-2" />
-            Copiar Link do Formulário
-          </Button>
+          <ShareFormDialog id="new">
+            <Button variant="outline" className="w-full md:w-auto">
+              <Share2 className="h-4 w-4 mr-2" />
+              Compartilhar Formulário
+            </Button>
+          </ShareFormDialog>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-full md:w-[150px]">
               <SelectValue placeholder="Tipo" />
@@ -149,15 +137,16 @@ export default function SubmissionsList() {
                     <TableCell>{getStatusBadge(sub.status)}</TableCell>
                     <TableCell className="text-right">
                       <div className="flex items-center justify-end gap-2">
-                        <Button
-                          variant="ghost"
-                          size="sm"
-                          onClick={() => handleCopyLink(sub.id)}
-                          title="Copiar link específico deste processo"
-                        >
-                          <Copy className="h-4 w-4 xl:mr-2" />
-                          <span className="hidden xl:inline">Link</span>
-                        </Button>
+                        <ShareFormDialog id={sub.id}>
+                          <Button
+                            variant="ghost"
+                            size="sm"
+                            title="Compartilhar link específico deste processo"
+                          >
+                            <Share2 className="h-4 w-4 xl:mr-2" />
+                            <span className="hidden xl:inline">Share</span>
+                          </Button>
+                        </ShareFormDialog>
                         <Link to={`/admin/${sub.id}`}>
                           <Button variant="ghost" size="sm">
                             <Eye className="h-4 w-4 xl:mr-2" />

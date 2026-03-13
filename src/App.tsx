@@ -13,6 +13,7 @@ import SubmissionsList from './pages/admin/SubmissionsList'
 import SubmissionDetail from './pages/admin/SubmissionDetail'
 import ClientForm from './pages/form/ClientForm'
 import FormSuccess from './pages/form/FormSuccess'
+import ShortLinkRedirect from './pages/form/ShortLinkRedirect'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -31,6 +32,9 @@ const App = () => (
             <Route path="/admin" element={<SubmissionsList />} />
             <Route path="/admin/:id" element={<SubmissionDetail />} />
           </Route>
+
+          {/* Rotas curtas para fácil compartilhamento e acesso via QR Code */}
+          <Route path="/s/:id" element={<ShortLinkRedirect />} />
 
           <Route path="*" element={<NotFound />} />
         </Routes>

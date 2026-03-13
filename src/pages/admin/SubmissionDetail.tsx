@@ -6,13 +6,12 @@ import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
-import { useToast } from '@/hooks/use-toast'
+import { ShareFormDialog } from '@/components/share/ShareFormDialog'
 
 export default function SubmissionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { getSubmission } = useAppStore()
-  const { toast } = useToast()
   const [viewHtml, setViewHtml] = useState(false)
 
   const submission = id ? getSubmission(id) : undefined
@@ -23,15 +22,6 @@ export default function SubmissionDetail() {
 
   const handlePrint = () => {
     window.print()
-  }
-
-  const handleCopyLink = () => {
-    const url = `https://formulario-digital-clientes-38ac0.goskip.app/form/${id}`
-    navigator.clipboard.writeText(url).then(() => {
-      toast({
-        description: 'Link copiado com sucesso!',
-      })
-    })
   }
 
   const rawData = JSON.stringify(submission, null, 2)
@@ -46,10 +36,12 @@ export default function SubmissionDetail() {
           <h1 className="text-2xl font-bold">Detalhes do Processo</h1>
         </div>
         <div className="flex flex-wrap gap-2">
-          <Button variant="secondary" onClick={handleCopyLink}>
-            <Share2 className="h-4 w-4 mr-2" />
-            <span className="hidden sm:inline">Copiar Link</span>
-          </Button>
+          <ShareFormDialog id={id}>
+            <Button variant="secondary">
+              <Share2 className="h-4 w-4 mr-2" />
+              <span className="hidden sm:inline">Compartilhar</span>
+            </Button>
+          </ShareFormDialog>
           <Button variant="outline" onClick={() => setViewHtml(!viewHtml)}>
             <Code className="h-4 w-4 mr-2" />
             <span className="hidden sm:inline">

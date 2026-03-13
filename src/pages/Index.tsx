@@ -5,29 +5,14 @@ import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/com
 import { Input } from '@/components/ui/input'
 import { StatusChart } from '@/components/dashboard/StatusChart'
 import { useAppStore } from '@/store/AppContext'
-import { useToast } from '@/hooks/use-toast'
+import { ShareFormDialog } from '@/components/share/ShareFormDialog'
 
 export default function Index() {
   const navigate = useNavigate()
   const { submissions } = useAppStore()
-  const { toast } = useToast()
 
   const handleCreateForm = () => {
     navigate('/form/new')
-  }
-
-  const handleCopyLink = () => {
-    const url = 'https://formulario-digital-clientes-38ac0.goskip.app/form/new'
-    navigator.clipboard
-      .writeText(url)
-      .then(() => {
-        toast({
-          description: 'Link copiado com sucesso!',
-        })
-      })
-      .catch((err) => {
-        console.error('Falha ao copiar:', err)
-      })
   }
 
   return (
@@ -83,10 +68,12 @@ export default function Index() {
               <FileText className="mr-2 h-4 w-4" />
               Ver Respostas
             </Button>
-            <Button variant="secondary" className="flex-1" onClick={handleCopyLink}>
-              <Share2 className="mr-2 h-4 w-4" />
-              Copiar Link do Formulário
-            </Button>
+            <ShareFormDialog id="new">
+              <Button variant="secondary" className="flex-1 w-full">
+                <Share2 className="mr-2 h-4 w-4" />
+                Compartilhar Formulário
+              </Button>
+            </ShareFormDialog>
           </CardContent>
         </Card>
       </div>

@@ -20,9 +20,9 @@ const DEFAULT_DOCS: DocumentItem[] = [
   {
     id: 'posse',
     label:
-      'documento que comprove a posse ou a propriedade regular do empresário no imóvel aonde será estabelecida a empresa',
+      'Documento que comprove a posse ou a propriedade regular do empresário no imóvel aonde será estabelecida a empresa',
   },
-  { id: 'casamento', label: 'certidão de casamento' },
+  { id: 'casamento', label: 'Certidão de casamento' },
 ]
 
 export default function ClientForm() {
@@ -135,9 +135,17 @@ export default function ClientForm() {
 
     if (id && id !== 'new') {
       updateSubmission(id, data)
+      toast({
+        title: 'Sucesso!',
+        description: 'Seus dados foram atualizados e enviados com sucesso.',
+      })
       navigate(`/form/${id}/success`)
     } else {
       const newId = addSubmission(data)
+      toast({
+        title: 'Sucesso!',
+        description: 'Seu formulário foi enviado com sucesso e recebido pela nossa equipe.',
+      })
       navigate(`/form/${newId}/success`)
     }
   }
