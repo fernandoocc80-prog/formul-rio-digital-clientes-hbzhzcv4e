@@ -3,7 +3,7 @@ import { Submission } from '@/types'
 
 interface AppState {
   submissions: Submission[]
-  addSubmission: (sub: Omit<Submission, 'id' | 'createdAt' | 'updatedAt'>) => string
+  addSubmission: (sub: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => string
   updateSubmission: (id: string, data: Partial<Submission>) => void
   getSubmission: (id: string) => Submission | undefined
 }
@@ -11,6 +11,7 @@ interface AppState {
 const mockData: Submission[] = [
   {
     id: 'sub-1',
+    protocol: '2023-10-15-0001',
     clientName: 'Tech Nova Solutions',
     status: 'completed',
     createdAt: '2023-10-15T10:00:00Z',
@@ -62,6 +63,7 @@ const mockData: Submission[] = [
   },
   {
     id: 'sub-2',
+    protocol: '2023-10-20-0002',
     clientName: 'Carlos Roberto (MEI)',
     status: 'submitted',
     createdAt: '2023-10-20T14:30:00Z',
@@ -94,10 +96,25 @@ const AppContext = createContext<AppState | undefined>(undefined)
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [submissions, setSubmissions] = useState<Submission[]>(mockData)
 
-  const addSubmission = (data: Omit<Submission, 'id' | 'createdAt' | 'updatedAt'>) => {
+  const addSubmission = (data: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => {
     const newId = `sub-${Math.random().toString(36).substring(2, 9)}`
-    const now = new Date().toISOString()
-    const newSubmission: Submission = { ...data, id: newId, createdAt: now, updatedAt: now }
+    const now = new Date()
+    const isoString = now.toISOString()
+
+    const yyyy = now.getFullYear()
+    const mm = String(now.getMonth() + 1).padStart(2, '0')
+    const dd = String(now.getDate()).padStart(2, '0')
+    const seq = String(submissions.length + 1).padStart(4, '0')
+    const protocol = `${yyyy}-${mm}-${dd}-${seq}`
+
+    const newSubmission: Submission = {
+      ...data,
+      id: newId,
+      protocol,
+      createdAt: isoString,
+      updatedAt: isoString,
+    }
+
     setSubmissions((prev) => [newSubmission, ...prev])
     return newId
   }

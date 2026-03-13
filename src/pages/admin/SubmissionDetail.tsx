@@ -61,7 +61,9 @@ export default function SubmissionDetail() {
         <div className="print-break-inside-avoid bg-white p-8 rounded-lg border shadow-sm space-y-8">
           <div className="text-center border-b pb-6">
             <h2 className="text-3xl font-bold">Ficha de Abertura de Empresa</h2>
-            <p className="text-muted-foreground mt-2">Protocolo: {submission.id.toUpperCase()}</p>
+            <p className="text-muted-foreground mt-2 font-mono text-lg">
+              Protocolo: {submission.protocol}
+            </p>
             <div className="mt-4 flex justify-center gap-2 print-only">
               <Badge variant="outline">
                 Data: {new Date(submission.createdAt).toLocaleDateString('pt-BR')}

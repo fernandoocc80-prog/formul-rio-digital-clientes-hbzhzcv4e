@@ -4,13 +4,16 @@ import { CheckCircle2, Download, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
 import { useToast } from '@/hooks/use-toast'
+import { useAppStore } from '@/store/AppContext'
 
 export default function FormSuccess() {
   const { id } = useParams()
   const { toast } = useToast()
+  const { getSubmission } = useAppStore()
+
+  const submission = id ? getSubmission(id) : undefined
 
   useEffect(() => {
-    // Simulating automated email notification trigger
     const timer = setTimeout(() => {
       toast({
         title: 'Notificação Enviada',
@@ -31,15 +34,17 @@ export default function FormSuccess() {
             </div>
           </div>
 
-          <div className="space-y-2">
+          <div className="space-y-4">
             <h1 className="text-3xl font-bold tracking-tight">Formulário Enviado!</h1>
-            <p className="text-muted-foreground">
-              Recebemos os dados e documentos com sucesso. O protocolo do seu processo é{' '}
-              <span className="font-mono font-medium text-foreground">
-                {id?.toUpperCase() || 'NOVO'}
-              </span>
-              .
-            </p>
+            <p className="text-muted-foreground">Recebemos os dados e documentos com sucesso.</p>
+            <div className="bg-muted/50 py-3 px-4 rounded-md">
+              <p className="text-sm font-medium">
+                Protocolo de Atendimento:{' '}
+                <span className="font-mono font-bold text-primary block text-lg mt-1">
+                  {submission?.protocol || id?.toUpperCase() || 'NOVO'}
+                </span>
+              </p>
+            </div>
           </div>
 
           <div className="flex flex-col gap-3 pt-4">

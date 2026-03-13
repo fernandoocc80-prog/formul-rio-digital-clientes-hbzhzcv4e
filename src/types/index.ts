@@ -38,6 +38,7 @@ export interface DocumentItem {
 
 export interface Submission {
   id: string
+  protocol: string
   clientName: string
   status: SubmissionStatus
   createdAt: string

@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Filter } from 'lucide-react'
+import { Eye } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -88,6 +88,7 @@ export default function SubmissionsList() {
           <Table>
             <TableHeader>
               <TableRow>
+                <TableHead>Protocolo</TableHead>
                 <TableHead>Empresa</TableHead>
                 <TableHead>Contato</TableHead>
                 <TableHead>Data</TableHead>
@@ -98,13 +99,16 @@ export default function SubmissionsList() {
             <TableBody>
               {filtered.length === 0 ? (
                 <TableRow>
-                  <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
+                  <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
                     Nenhum registro encontrado para os filtros selecionados.
                   </TableCell>
                 </TableRow>
               ) : (
                 filtered.map((sub) => (
                   <TableRow key={sub.id}>
+                    <TableCell className="font-mono text-sm whitespace-nowrap">
+                      {sub.protocol}
+                    </TableCell>
                     <TableCell>
                       <div className="font-medium flex items-center gap-2">
                         {sub.company?.tradeName || sub.company?.suggestedName1 || 'Pendente'}

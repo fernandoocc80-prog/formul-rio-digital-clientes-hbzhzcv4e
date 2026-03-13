@@ -3,6 +3,7 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Card, CardContent } from '@/components/ui/card'
 import { Upload, CheckCircle2, Trash2 } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 interface Props {
   documents: DocumentItem[]
@@ -10,7 +11,22 @@ interface Props {
 }
 
 export function DocumentsStep({ documents, onChange }: Props) {
+  const { toast } = useToast()
+
   const handleUpload = (id: string, file: File) => {
+    const allowedExtensions = ['.pdf', '.jpg', '.jpeg', '.png']
+    const isValidType = ['application/pdf', 'image/jpeg', 'image/png'].includes(file.type)
+    const isValidExt = allowedExtensions.some((ext) => file.name.toLowerCase().endsWith(ext))
+
+    if (!isValidType && !isValidExt) {
+      toast({
+        title: 'Formato inválido',
+        description: 'Formato de arquivo inválido. Por favor, envie arquivos em PDF, JPG ou PNG.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     onChange(
       documents.map((d) =>
         d.id === id ? { ...d, fileName: file.name, uploadedAt: new Date().toISOString() } : d,
@@ -72,6 +88,7 @@ export function DocumentsStep({ documents, onChange }: Props) {
                       className="absolute inset-0 w-full h-full opacity-0 cursor-pointer"
                       onChange={(e) => {
                         if (e.target.files?.[0]) handleUpload(doc.id, e.target.files[0])
+                        e.target.value = ''
                       }}
                     />
                     <Button variant="outline" size="sm" className="w-full">
