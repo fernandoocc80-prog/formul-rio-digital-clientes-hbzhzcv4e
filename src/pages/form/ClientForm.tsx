@@ -1,17 +1,23 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
 import { ChevronRight, ChevronLeft, Check } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/hooks/use-toast'
 import { useAppStore } from '@/store/AppContext'
-import { CompanyData, Partner, ActivityData } from '@/types'
+import { CompanyData, Partner, ActivityData, DocumentItem } from '@/types'
 
 import { CompanyStep } from '@/components/form/CompanyStep'
 import { PartnersStep } from '@/components/form/PartnersStep'
 import { ActivityStep } from '@/components/form/ActivityStep'
+import { DocumentsStep } from '@/components/form/DocumentsStep'
+import { SignatureStep } from '@/components/form/SignatureStep'
 
-const STEPS = ['Empresa', 'Sócios', 'Atividades', 'Revisão']
+const DEFAULT_DOCS: DocumentItem[] = [
+  { id: 'rg', label: 'Documento de Identidade (RG/CNH)' },
+  { id: 'residencia', label: 'Comprovante de Residência' },
+  { id: 'iptu', label: 'Capa do IPTU (Endereço Comercial)' },
+]
 
 export default function ClientForm() {
   const { id } = useParams()
@@ -19,11 +25,15 @@ export default function ClientForm() {
   const { toast } = useToast()
   const { addSubmission, updateSubmission, getSubmission } = useAppStore()
 
-  const [currentStep, setCurrentStep] = useState(0)
+  const [currentStepId, setCurrentStepId] = useState('company')
 
-  // Form State
   const [clientName, setClientName] = useState('')
   const [company, setCompany] = useState<CompanyData>({
+    type: 'ltda',
+    tradeName: '',
+    email: '',
+    phone: '',
+    zipCode: '',
     suggestedName1: '',
     suggestedName2: '',
     suggestedName3: '',
@@ -34,7 +44,10 @@ export default function ClientForm() {
     mainCnae: '',
     secondaryCnaes: '',
     businessAddress: '',
+    description: '',
   })
+  const [documents, setDocuments] = useState<DocumentItem[]>(DEFAULT_DOCS)
+  const [signature, setSignature] = useState('')
 
   useEffect(() => {
     if (id && id !== 'new') {
@@ -44,32 +57,71 @@ export default function ClientForm() {
         setCompany(existing.company || company)
         setPartners(existing.partners || [])
         setActivity(existing.activity || activity)
+        setDocuments(existing.documents?.length ? existing.documents : DEFAULT_DOCS)
+        setSignature(existing.signature || '')
       }
     }
   }, [id])
 
+  const visibleSteps = useMemo(() => {
+    const steps = [
+      { id: 'company', label: 'Empresa' },
+      { id: 'partners', label: 'Sócios', hideIf: company.type === 'mei' },
+      { id: 'activity', label: 'Atividades' },
+      { id: 'documents', label: 'Documentos' },
+      { id: 'signature', label: 'Assinatura' },
+      { id: 'review', label: 'Revisão' },
+    ]
+    return steps.filter((s) => !s.hideIf)
+  }, [company.type])
+
+  let currentIndex = visibleSteps.findIndex((s) => s.id === currentStepId)
+  if (currentIndex === -1) currentIndex = 0
+  const activeStepId = visibleSteps[currentIndex].id
+
   const handleNext = () => {
-    if (currentStep === 0 && !company.suggestedName1) {
-      return toast({
-        title: 'Campo Obrigatório',
-        description: 'Preencha ao menos a 1ª opção de nome.',
-        variant: 'destructive',
+    if (activeStepId === 'company') {
+      if (!company.tradeName || !company.email) {
+        return toast({
+          title: 'Campos Obrigatórios',
+          description: 'Nome Fantasia e E-mail corporativo são obrigatórios.',
+          variant: 'destructive',
+        })
+      }
+      if (company.type === 'ltda' && !company.suggestedName1) {
+        return toast({
+          title: 'Campo Obrigatório',
+          description: 'Preencha ao menos a 1ª opção de razão social.',
+          variant: 'destructive',
+        })
+      }
+    }
+
+    if (activeStepId === 'signature' && !signature) {
+      toast({
+        title: 'Assinatura pendente',
+        description: 'Por favor, assine o formulário antes de revisar e enviar.',
       })
     }
-    if (currentStep < STEPS.length - 1) setCurrentStep((c) => c + 1)
+
+    if (currentIndex < visibleSteps.length - 1) {
+      setCurrentStepId(visibleSteps[currentIndex + 1].id)
+    }
   }
 
   const handlePrev = () => {
-    if (currentStep > 0) setCurrentStep((c) => c - 1)
+    if (currentIndex > 0) setCurrentStepId(visibleSteps[currentIndex - 1].id)
   }
 
   const handleSubmit = () => {
     const data = {
-      clientName: clientName || company.suggestedName1 || 'Cliente Novo',
+      clientName: clientName || company.tradeName || company.suggestedName1 || 'Cliente Novo',
       status: 'submitted' as const,
       company,
-      partners,
+      partners: company.type === 'mei' ? [] : partners,
       activity,
+      documents,
+      signature,
     }
 
     if (id && id !== 'new') {
@@ -81,44 +133,57 @@ export default function ClientForm() {
     }
   }
 
-  const progress = ((currentStep + 1) / STEPS.length) * 100
+  const progress = ((currentIndex + 1) / visibleSteps.length) * 100
 
   return (
     <div className="max-w-3xl mx-auto py-8 px-4">
-      <div className="mb-8">
+      <div className="mb-8 hidden sm:block">
         <Progress value={progress} className="h-2 mb-2" />
         <div className="flex justify-between text-xs text-muted-foreground font-medium">
-          {STEPS.map((s, i) => (
-            <span key={s} className={i <= currentStep ? 'text-primary' : ''}>
-              {s}
+          {visibleSteps.map((s, i) => (
+            <span key={s.id} className={i <= currentIndex ? 'text-primary' : ''}>
+              {s.label}
             </span>
           ))}
         </div>
       </div>
 
+      <div className="mb-6 sm:hidden">
+        <Progress value={progress} className="h-2 mb-2" />
+        <p className="text-sm text-center text-muted-foreground font-medium">
+          Passo {currentIndex + 1} de {visibleSteps.length}: {visibleSteps[currentIndex].label}
+        </p>
+      </div>
+
       <div className="min-h-[400px]">
-        {currentStep === 0 && <CompanyStep data={company} onChange={setCompany} />}
-        {currentStep === 1 && <PartnersStep partners={partners} onChange={setPartners} />}
-        {currentStep === 2 && <ActivityStep data={activity} onChange={setActivity} />}
-        {currentStep === 3 && (
+        {activeStepId === 'company' && <CompanyStep data={company} onChange={setCompany} />}
+        {activeStepId === 'partners' && <PartnersStep partners={partners} onChange={setPartners} />}
+        {activeStepId === 'activity' && <ActivityStep data={activity} onChange={setActivity} />}
+        {activeStepId === 'documents' && (
+          <DocumentsStep documents={documents} onChange={setDocuments} />
+        )}
+        {activeStepId === 'signature' && (
+          <SignatureStep signature={signature} onChange={setSignature} />
+        )}
+        {activeStepId === 'review' && (
           <div className="space-y-6 animate-fade-in text-center py-12">
             <div className="w-16 h-16 bg-primary/10 text-primary rounded-full flex items-center justify-center mx-auto mb-4">
               <Check className="w-8 h-8" />
             </div>
             <h2 className="text-2xl font-bold">Tudo Certo!</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Revisamos os dados preenchidos. Clique em "Finalizar" para enviar a solicitação para
-              nossa equipe de contabilidade.
+              Revisamos os dados preenchidos e documentos anexados. Clique em "Finalizar" para
+              enviar a solicitação para nossa equipe.
             </p>
           </div>
         )}
       </div>
 
       <div className="flex justify-between pt-8 border-t mt-8">
-        <Button variant="outline" onClick={handlePrev} disabled={currentStep === 0}>
+        <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
           <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
         </Button>
-        {currentStep === STEPS.length - 1 ? (
+        {currentIndex === visibleSteps.length - 1 ? (
           <Button onClick={handleSubmit} className="bg-success hover:bg-success/90">
             Finalizar Envio <Check className="w-4 h-4 ml-2" />
           </Button>

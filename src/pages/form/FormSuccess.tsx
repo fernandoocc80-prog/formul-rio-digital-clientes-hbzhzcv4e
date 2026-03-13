@@ -1,10 +1,24 @@
+import { useEffect } from 'react'
 import { useParams, Link } from 'react-router-dom'
 import { CheckCircle2, Download, Home } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent } from '@/components/ui/card'
+import { useToast } from '@/hooks/use-toast'
 
 export default function FormSuccess() {
   const { id } = useParams()
+  const { toast } = useToast()
+
+  useEffect(() => {
+    // Simulating automated email notification trigger
+    const timer = setTimeout(() => {
+      toast({
+        title: 'Notificação Enviada',
+        description: 'Um e-mail de confirmação foi enviado para o contato informado com sucesso.',
+      })
+    }, 1500)
+    return () => clearTimeout(timer)
+  }, [toast])
 
   return (
     <div className="min-h-[80vh] flex items-center justify-center p-4">
@@ -20,7 +34,7 @@ export default function FormSuccess() {
           <div className="space-y-2">
             <h1 className="text-3xl font-bold tracking-tight">Formulário Enviado!</h1>
             <p className="text-muted-foreground">
-              Recebemos os dados com sucesso. O protocolo do seu processo é{' '}
+              Recebemos os dados e documentos com sucesso. O protocolo do seu processo é{' '}
               <span className="font-mono font-medium text-foreground">
                 {id?.toUpperCase() || 'NOVO'}
               </span>

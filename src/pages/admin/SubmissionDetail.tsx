@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Printer, Code, ArrowLeft } from 'lucide-react'
+import { Printer, Code, ArrowLeft, CheckCircle2 } from 'lucide-react'
 import { useAppStore } from '@/store/AppContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,7 +27,7 @@ export default function SubmissionDetail() {
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
-      <div className="flex items-center justify-between no-print">
+      <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 no-print">
         <div className="flex items-center gap-4">
           <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
             <ArrowLeft className="h-5 w-5" />
@@ -37,7 +37,7 @@ export default function SubmissionDetail() {
         <div className="flex gap-2">
           <Button variant="outline" onClick={() => setViewHtml(!viewHtml)}>
             <Code className="h-4 w-4 mr-2" />
-            {viewHtml ? 'Ver Formatado' : 'Exportar HTML/JSON'}
+            {viewHtml ? 'Ver Formatado' : 'Exportar Dados Brutos'}
           </Button>
           <Button onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />
@@ -49,7 +49,7 @@ export default function SubmissionDetail() {
       {viewHtml ? (
         <Card className="no-print">
           <CardHeader>
-            <CardTitle>Dados Brutos</CardTitle>
+            <CardTitle>Dados Brutos (JSON/Export)</CardTitle>
           </CardHeader>
           <CardContent>
             <pre className="bg-slate-900 text-slate-50 p-4 rounded-lg overflow-x-auto text-sm">
@@ -73,10 +73,26 @@ export default function SubmissionDetail() {
             <h3 className="text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
               1. Dados da Empresa
             </h3>
-            <div className="grid grid-cols-2 gap-4">
+            <div className="grid grid-cols-2 gap-y-4 gap-x-6">
               <div>
-                <p className="text-sm text-muted-foreground">Nome Sugerido 1</p>
-                <p className="font-medium">{submission.company?.suggestedName1 || '-'}</p>
+                <p className="text-sm text-muted-foreground">Tipo Societário</p>
+                <p className="font-medium uppercase">{submission.company?.type || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Nome Fantasia</p>
+                <p className="font-medium">{submission.company?.tradeName || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">E-mail</p>
+                <p>{submission.company?.email || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">Telefone</p>
+                <p>{submission.company?.phone || '-'}</p>
+              </div>
+              <div>
+                <p className="text-sm text-muted-foreground">CEP</p>
+                <p>{submission.company?.zipCode || '-'}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Capital Social</p>
@@ -88,14 +104,18 @@ export default function SubmissionDetail() {
                     : '-'}
                 </p>
               </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Opção 2</p>
-                <p>{submission.company?.suggestedName2 || '-'}</p>
-              </div>
-              <div>
-                <p className="text-sm text-muted-foreground">Opção 3</p>
-                <p>{submission.company?.suggestedName3 || '-'}</p>
-              </div>
+              {submission.company?.type === 'ltda' && (
+                <div className="col-span-2 mt-2">
+                  <p className="text-sm text-muted-foreground font-medium mb-1">
+                    Opções de Razão Social
+                  </p>
+                  <ul className="list-disc pl-5 space-y-1 text-sm">
+                    <li>{submission.company?.suggestedName1 || '-'}</li>
+                    <li>{submission.company?.suggestedName2 || '-'}</li>
+                    <li>{submission.company?.suggestedName3 || '-'}</li>
+                  </ul>
+                </div>
+              )}
             </div>
           </section>
 
@@ -115,6 +135,12 @@ export default function SubmissionDetail() {
                 <p>{submission.activity?.secondaryCnaes || '-'}</p>
               </div>
               <div>
+                <p className="text-sm text-muted-foreground">Descrição da Atividade</p>
+                <p className="bg-slate-50 p-3 rounded text-sm mt-1">
+                  {submission.activity?.description || '-'}
+                </p>
+              </div>
+              <div>
                 <p className="text-sm text-muted-foreground">Endereço do Negócio</p>
                 <p>{submission.activity?.businessAddress || '-'}</p>
               </div>
@@ -123,39 +149,94 @@ export default function SubmissionDetail() {
 
           <Separator />
 
-          <section>
+          {submission.company?.type !== 'mei' && (
+            <>
+              <section className="print-break-inside-avoid">
+                <h3 className="text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
+                  3. Quadro Societário
+                </h3>
+                <div className="space-y-4">
+                  {submission.partners?.map((p, i) => (
+                    <div key={p.id} className="bg-slate-50 p-4 rounded-md border">
+                      <div className="flex justify-between items-center mb-3">
+                        <h4 className="font-bold">Sócio {i + 1}</h4>
+                        <Badge variant="secondary">{p.sharePercentage}% Quotas</Badge>
+                      </div>
+                      <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+                        <div>
+                          <span className="text-muted-foreground block">Nome</span> {p.name}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">CPF</span> {p.cpf}
+                        </div>
+                        <div>
+                          <span className="text-muted-foreground block">RG</span> {p.rg}
+                        </div>
+                        <div className="col-span-2">
+                          <span className="text-muted-foreground block">Endereço Residencial</span>{' '}
+                          {p.address}
+                        </div>
+                      </div>
+                    </div>
+                  ))}
+                  {(!submission.partners || submission.partners.length === 0) && (
+                    <p className="text-muted-foreground italic">Nenhum sócio registrado.</p>
+                  )}
+                </div>
+              </section>
+              <Separator />
+            </>
+          )}
+
+          <section className="print-break-inside-avoid">
             <h3 className="text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
-              3. Quadro Societário
+              {submission.company?.type === 'mei' ? '3' : '4'}. Documentos Anexados
             </h3>
-            <div className="space-y-6">
-              {submission.partners?.map((p, i) => (
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+              {submission.documents?.map((doc) => (
                 <div
-                  key={p.id}
-                  className="bg-slate-50 p-4 rounded-md border print-break-inside-avoid"
+                  key={doc.id}
+                  className="flex items-center gap-3 p-3 border rounded-md bg-slate-50"
                 >
-                  <div className="flex justify-between items-center mb-3">
-                    <h4 className="font-bold">Sócio {i + 1}</h4>
-                    <Badge variant="secondary">{p.sharePercentage}% Quotas</Badge>
-                  </div>
-                  <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
-                    <div>
-                      <span className="text-muted-foreground block">Nome</span> {p.name}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">CPF</span> {p.cpf}
-                    </div>
-                    <div>
-                      <span className="text-muted-foreground block">RG</span> {p.rg}
-                    </div>
-                    <div className="col-span-2">
-                      <span className="text-muted-foreground block">Endereço Residencial</span>{' '}
-                      {p.address}
-                    </div>
+                  {doc.fileName ? (
+                    <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
+                  ) : (
+                    <div className="h-5 w-5 rounded-full border-2 border-dashed border-muted-foreground shrink-0" />
+                  )}
+                  <div>
+                    <p className="font-medium text-sm">{doc.label}</p>
+                    <p className="text-xs text-muted-foreground">{doc.fileName || 'Pendente'}</p>
                   </div>
                 </div>
               ))}
-              {(!submission.partners || submission.partners.length === 0) && (
-                <p className="text-muted-foreground italic">Nenhum sócio registrado.</p>
+              {(!submission.documents || submission.documents.length === 0) && (
+                <p className="text-muted-foreground italic">Nenhum documento registrado.</p>
+              )}
+            </div>
+          </section>
+
+          <Separator />
+
+          <section className="print-break-inside-avoid text-center pt-8 pb-16">
+            <h3 className="text-lg font-medium mb-12">Assinatura Digital</h3>
+            <div className="max-w-md mx-auto">
+              {submission.signature ? (
+                <div className="border-b border-black pb-2 mb-2 inline-block px-12">
+                  <img
+                    src={submission.signature}
+                    alt="Assinatura"
+                    className="h-24 object-contain mx-auto mix-blend-multiply"
+                  />
+                </div>
+              ) : (
+                <div className="border-b border-black pb-2 mb-2 w-full max-w-sm mx-auto h-24" />
+              )}
+              <p className="font-semibold text-sm">{submission.clientName}</p>
+              <p className="text-xs text-muted-foreground">Representante Legal / Solicitante</p>
+              {submission.signature && (
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Assinado digitalmente em {new Date(submission.updatedAt).toLocaleString('pt-BR')}.
+                </p>
               )}
             </div>
           </section>

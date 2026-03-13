@@ -18,7 +18,9 @@ export function ActivityStep({ data, onChange }: Props) {
     <div className="space-y-6 animate-slide-in-right">
       <div>
         <h2 className="text-2xl font-bold">Atividades e Endereço</h2>
-        <p className="text-muted-foreground">Defina os códigos CNAE e o local do negócio.</p>
+        <p className="text-muted-foreground">
+          Defina os códigos CNAE, local e descreva a atividade.
+        </p>
       </div>
 
       <Card>
@@ -34,12 +36,22 @@ export function ActivityStep({ data, onChange }: Props) {
           </div>
           <div className="space-y-2">
             <Label htmlFor="secCnae">CNAEs Secundários (separados por vírgula)</Label>
-            <Textarea
+            <Input
               id="secCnae"
               value={data.secondaryCnaes || ''}
               onChange={(e) => handleChange('secondaryCnaes', e.target.value)}
               placeholder="Ex: 6201-5/01, 6202-3/00"
-              className="resize-none"
+            />
+          </div>
+
+          <div className="space-y-2">
+            <Label htmlFor="desc">Descrição Detalhada da Atividade</Label>
+            <Textarea
+              id="desc"
+              value={data.description || ''}
+              onChange={(e) => handleChange('description', e.target.value)}
+              placeholder="Descreva com detalhes o que a empresa faz, principais produtos ou serviços..."
+              className="resize-none h-24"
             />
           </div>
 
