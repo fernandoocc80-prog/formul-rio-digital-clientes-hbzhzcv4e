@@ -1,6 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye } from 'lucide-react'
+import { Eye, Copy, Share2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -20,6 +20,7 @@ import {
   SelectValue,
 } from '@/components/ui/select'
 import { useAppStore } from '@/store/AppContext'
+import { useToast } from '@/hooks/use-toast'
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -36,6 +37,7 @@ const getStatusBadge = (status: string) => {
 
 export default function SubmissionsList() {
   const { submissions } = useAppStore()
+  const { toast } = useToast()
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
 
@@ -44,6 +46,15 @@ export default function SubmissionsList() {
     if (typeFilter !== 'all' && s.company?.type !== typeFilter) return false
     return true
   })
+
+  const handleCopyLink = (id: string = 'new') => {
+    const url = `https://formulario-digital-clientes-38ac0.goskip.app/form/${id}`
+    navigator.clipboard.writeText(url).then(() => {
+      toast({
+        description: 'Link copiado com sucesso!',
+      })
+    })
+  }
 
   return (
     <div className="space-y-6">
@@ -54,7 +65,15 @@ export default function SubmissionsList() {
             Acompanhe e gerencie as solicitações de abertura de empresa.
           </p>
         </div>
-        <div className="flex items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+          <Button
+            variant="outline"
+            onClick={() => handleCopyLink('new')}
+            className="w-full md:w-auto"
+          >
+            <Share2 className="h-4 w-4 mr-2" />
+            Copiar Link do Formulário
+          </Button>
           <Select value={typeFilter} onValueChange={setTypeFilter}>
             <SelectTrigger className="w-full md:w-[150px]">
               <SelectValue placeholder="Tipo" />
@@ -129,12 +148,23 @@ export default function SubmissionsList() {
                     <TableCell>{new Date(sub.createdAt).toLocaleDateString('pt-BR')}</TableCell>
                     <TableCell>{getStatusBadge(sub.status)}</TableCell>
                     <TableCell className="text-right">
-                      <Link to={`/admin/${sub.id}`}>
-                        <Button variant="ghost" size="sm">
-                          <Eye className="h-4 w-4 mr-2" />
-                          Ver
+                      <div className="flex items-center justify-end gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => handleCopyLink(sub.id)}
+                          title="Copiar link específico deste processo"
+                        >
+                          <Copy className="h-4 w-4 xl:mr-2" />
+                          <span className="hidden xl:inline">Link</span>
                         </Button>
-                      </Link>
+                        <Link to={`/admin/${sub.id}`}>
+                          <Button variant="ghost" size="sm">
+                            <Eye className="h-4 w-4 xl:mr-2" />
+                            <span className="hidden xl:inline">Ver</span>
+                          </Button>
+                        </Link>
+                      </div>
                     </TableCell>
                   </TableRow>
                 ))

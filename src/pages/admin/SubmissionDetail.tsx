@@ -1,16 +1,18 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Printer, Code, ArrowLeft, CheckCircle2 } from 'lucide-react'
+import { Printer, Code, ArrowLeft, CheckCircle2, Share2 } from 'lucide-react'
 import { useAppStore } from '@/store/AppContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
+import { useToast } from '@/hooks/use-toast'
 
 export default function SubmissionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
   const { getSubmission } = useAppStore()
+  const { toast } = useToast()
   const [viewHtml, setViewHtml] = useState(false)
 
   const submission = id ? getSubmission(id) : undefined
@@ -21,6 +23,15 @@ export default function SubmissionDetail() {
 
   const handlePrint = () => {
     window.print()
+  }
+
+  const handleCopyLink = () => {
+    const url = `https://formulario-digital-clientes-38ac0.goskip.app/form/${id}`
+    navigator.clipboard.writeText(url).then(() => {
+      toast({
+        description: 'Link copiado com sucesso!',
+      })
+    })
   }
 
   const rawData = JSON.stringify(submission, null, 2)
@@ -34,10 +45,16 @@ export default function SubmissionDetail() {
           </Button>
           <h1 className="text-2xl font-bold">Detalhes do Processo</h1>
         </div>
-        <div className="flex gap-2">
+        <div className="flex flex-wrap gap-2">
+          <Button variant="secondary" onClick={handleCopyLink}>
+            <Share2 className="h-4 w-4 mr-2" />
+            <span className="hidden sm:inline">Copiar Link</span>
+          </Button>
           <Button variant="outline" onClick={() => setViewHtml(!viewHtml)}>
             <Code className="h-4 w-4 mr-2" />
-            {viewHtml ? 'Ver Formatado' : 'Exportar Dados Brutos'}
+            <span className="hidden sm:inline">
+              {viewHtml ? 'Ver Formatado' : 'Exportar Dados'}
+            </span>
           </Button>
           <Button onClick={handlePrint}>
             <Printer className="h-4 w-4 mr-2" />

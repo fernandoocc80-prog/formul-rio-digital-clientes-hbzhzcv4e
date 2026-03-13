@@ -1,17 +1,33 @@
 import { Link, useNavigate } from 'react-router-dom'
-import { PlusCircle, FileText, Activity, Clock } from 'lucide-react'
+import { PlusCircle, FileText, Activity, Clock, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Input } from '@/components/ui/input'
 import { StatusChart } from '@/components/dashboard/StatusChart'
 import { useAppStore } from '@/store/AppContext'
+import { useToast } from '@/hooks/use-toast'
 
 export default function Index() {
   const navigate = useNavigate()
   const { submissions } = useAppStore()
+  const { toast } = useToast()
 
   const handleCreateForm = () => {
     navigate('/form/new')
+  }
+
+  const handleCopyLink = () => {
+    const url = 'https://formulario-digital-clientes-38ac0.goskip.app/form/new'
+    navigator.clipboard
+      .writeText(url)
+      .then(() => {
+        toast({
+          description: 'Link copiado com sucesso!',
+        })
+      })
+      .catch((err) => {
+        console.error('Falha ao copiar:', err)
+      })
   }
 
   return (
@@ -24,7 +40,7 @@ export default function Index() {
           </p>
         </div>
         <div className="flex gap-3">
-          <div className="relative w-64">
+          <div className="relative w-64 hidden sm:block">
             <Input placeholder="Buscar cliente ou CNPJ..." className="pl-8" />
           </div>
           <Button
@@ -62,10 +78,14 @@ export default function Index() {
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Ações Rápidas</CardTitle>
           </CardHeader>
-          <CardContent className="flex gap-4 mt-2">
+          <CardContent className="flex flex-col sm:flex-row gap-4 mt-2">
             <Button variant="outline" className="flex-1" onClick={() => navigate('/admin')}>
               <FileText className="mr-2 h-4 w-4" />
               Ver Respostas
+            </Button>
+            <Button variant="secondary" className="flex-1" onClick={handleCopyLink}>
+              <Share2 className="mr-2 h-4 w-4" />
+              Copiar Link do Formulário
             </Button>
           </CardContent>
         </Card>
