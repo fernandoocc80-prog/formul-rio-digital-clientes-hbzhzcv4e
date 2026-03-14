@@ -93,12 +93,13 @@ export default function Index() {
       <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-7">
         <Card className="col-span-1 lg:col-span-4">
           <CardHeader>
-            <CardTitle>Recentes</CardTitle>
-            <CardDescription>Últimas solicitações atualizadas.</CardDescription>
+            <CardTitle>Processos</CardTitle>
+            <CardDescription>Todas as solicitações recebidas.</CardDescription>
           </CardHeader>
           <CardContent>
-            <div className="space-y-4">
-              {submissions.slice(0, 5).map((sub) => (
+            <div className="space-y-4 max-h-[400px] overflow-y-auto pr-2">
+              {/* Consistent Query Logic: Removed local UI limiters like .slice(0,5) to ensure cross-device display parity matches actual data count */}
+              {submissions.map((sub) => (
                 <div
                   key={sub.id}
                   className="flex items-center justify-between p-3 border rounded-lg bg-slate-50/50 hover:bg-slate-50 transition-colors"

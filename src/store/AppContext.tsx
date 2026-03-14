@@ -9,6 +9,23 @@ import React, {
 } from 'react'
 import { Submission, AdminUser } from '@/types'
 
+const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v2'
+const LOCAL_CACHE_KEY = 'empresaflow_submissions_cache_v2'
+const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
+const USERS_STORAGE_KEY = 'empresaflow_users_v1'
+const CURRENT_USER_KEY = 'empresaflow_current_user_v1'
+
+// Explicit Cache Invalidation: clear local/session storage during initialization
+// This ensures the "Source of Truth" always comes from the server on fresh loads
+if (typeof window !== 'undefined') {
+  try {
+    localStorage.removeItem(LOCAL_CACHE_KEY)
+    sessionStorage.removeItem(LOCAL_CACHE_KEY)
+  } catch (e) {
+    /* ignore */
+  }
+}
+
 interface AppState {
   submissions: Submission[]
   emailTemplate: string
@@ -71,23 +88,128 @@ const mockData: Submission[] = [
     documents: [],
     signature: '',
   },
-]
-
-const mockUsers: AdminUser[] = [
   {
-    id: 'usr-admin-01',
-    name: 'Administrador Principal',
-    email: 'admin@empresaflow.com.br',
-    passwordHash: 'admin123',
-    createdAt: new Date().toISOString(),
+    id: 'sub-2',
+    protocol: '2023-10-16-0002',
+    clientName: 'Maria Silva MEI',
+    status: 'pending',
+    createdAt: '2023-10-16T14:20:00Z',
+    updatedAt: '2023-10-16T14:20:00Z',
+    partners: [],
+    company: {
+      type: 'mei',
+      tradeName: 'Maria Doces',
+      email: 'maria@doces.com.br',
+      phone: '(11) 97777-6666',
+      zipCode: '02000-000',
+      suggestedName1: 'Maria Silva Doces MEI',
+      suggestedName2: '',
+      suggestedName3: '',
+      capitalSocial: 5000,
+    },
+    activity: {
+      mainCnae: '1099-6/99',
+      secondaryCnaes: '',
+      businessAddress: 'Rua das Flores, 45',
+      description: 'Fabricação de doces e salgados',
+    },
+    documents: [],
+    signature: '',
+  },
+  {
+    id: 'sub-3',
+    protocol: '2023-10-17-0003',
+    clientName: 'Pedro Santos',
+    status: 'under_review',
+    createdAt: '2023-10-17T09:15:00Z',
+    updatedAt: '2023-10-18T10:30:00Z',
+    partners: [
+      {
+        id: 'p2',
+        name: 'Pedro Santos',
+        cpf: '222.333.444-55',
+        rg: '22.333.444-5',
+        address: 'Av Brasil, 1500',
+        sharePercentage: 100,
+      },
+    ],
+    company: {
+      type: 'ltda',
+      tradeName: 'Santos Logística',
+      email: 'pedro@santoslog.com.br',
+      phone: '(21) 98888-5555',
+      zipCode: '20000-000',
+      suggestedName1: 'Santos Logística e Transportes Ltda',
+      suggestedName2: 'Pedro Santos Logística Ltda',
+      suggestedName3: '',
+      capitalSocial: 100000,
+    },
+    activity: {
+      mainCnae: '4930-2/02',
+      secondaryCnaes: '',
+      businessAddress: 'Pátio Industrial, Galpão 3',
+      description: 'Transporte rodoviário de carga',
+    },
+    documents: [],
+    signature: '',
+  },
+  {
+    id: 'sub-4',
+    protocol: '2023-10-18-0004',
+    clientName: 'Ana Oliveira',
+    status: 'draft',
+    createdAt: '2023-10-18T16:45:00Z',
+    updatedAt: '2023-10-18T16:45:00Z',
+    partners: [],
+    company: {
+      type: 'ltda',
+      tradeName: 'Ana Clínica',
+      email: 'ana@clinica.com.br',
+      phone: '(31) 99999-1111',
+      zipCode: '30000-000',
+      suggestedName1: 'Ana Oliveira Serviços Médicos Ltda',
+      suggestedName2: '',
+      suggestedName3: '',
+      capitalSocial: 20000,
+    },
+    activity: {
+      mainCnae: '8630-5/03',
+      secondaryCnaes: '',
+      businessAddress: 'Rua da Saúde, 100',
+      description: 'Atividade médica ambulatorial',
+    },
+    documents: [],
+    signature: '',
+  },
+  {
+    id: 'sub-5',
+    protocol: '2023-10-19-0005',
+    clientName: 'Lucas Costa TI',
+    status: 'pending',
+    createdAt: '2023-10-19T11:20:00Z',
+    updatedAt: '2023-10-19T11:20:00Z',
+    partners: [],
+    company: {
+      type: 'mei',
+      tradeName: 'Lucas TI',
+      email: 'lucas@ti.com.br',
+      phone: '(41) 97777-2222',
+      zipCode: '40000-000',
+      suggestedName1: 'Lucas Costa MEI',
+      suggestedName2: '',
+      suggestedName3: '',
+      capitalSocial: 1000,
+    },
+    activity: {
+      mainCnae: '6209-1/00',
+      secondaryCnaes: '',
+      businessAddress: 'Trabalho Remoto',
+      description: 'Suporte técnico e manutenção',
+    },
+    documents: [],
+    signature: '',
   },
 ]
-
-const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v2'
-const LOCAL_CACHE_KEY = 'empresaflow_submissions_cache_v2'
-const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
-const USERS_STORAGE_KEY = 'empresaflow_users_v1'
-const CURRENT_USER_KEY = 'empresaflow_current_user_v1'
 
 const getRemoteDB = (): Submission[] => {
   try {
@@ -124,7 +246,7 @@ const getUsersDB = (): AdminUser[] => {
   } catch (e) {
     console.warn('Could not parse users local storage', e)
   }
-  return mockUsers
+  return [] // No default users to allow clean registration flow
 }
 
 const getCurrentUserDB = (): AdminUser | null => {
@@ -166,8 +288,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   })
 
   const clearCache = useCallback(() => {
-    localStorage.removeItem(LOCAL_CACHE_KEY)
-    sessionStorage.removeItem(LOCAL_CACHE_KEY)
+    try {
+      localStorage.removeItem(LOCAL_CACHE_KEY)
+      sessionStorage.removeItem(LOCAL_CACHE_KEY)
+    } catch (e) {
+      /* ignore */
+    }
   }, [])
 
   const syncSubmissions = useCallback(
@@ -304,6 +430,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setCurrentUser(user)
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user))
 
+        // Session Data Cleanup during authentication flow
         clearCache()
 
         try {
@@ -314,7 +441,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           /* ignore */
         }
 
-        await syncSubmissions({ force: true, background: true, skipCache: true })
+        // Login Synchronization: Force fresh fetch, ignoring local state (background false to ensure it completes visually)
+        await syncSubmissions({ force: true, background: false, skipCache: true })
         return true
       }
       return false
@@ -388,6 +516,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     let channel: BroadcastChannel | null = null
     try {
+      // Real-time Hub Integrity initialization
       channel = new BroadcastChannel('empresaflow_notifications')
       channel.onmessage = (event) => {
         if (
