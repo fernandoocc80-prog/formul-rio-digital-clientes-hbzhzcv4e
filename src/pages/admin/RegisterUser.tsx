@@ -20,7 +20,8 @@ export default function RegisterUser() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const [role, setRole] = useState<'admin' | 'colaborador'>('colaborador')
+  // Default to 'admin' to facilitate creating multiple administrators smoothly
+  const [role, setRole] = useState<'admin' | 'colaborador'>('admin')
   const { registerUser } = useAppStore()
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -32,8 +33,13 @@ export default function RegisterUser() {
       return
     }
     const normalizedEmail = email.trim().toLowerCase()
+
     registerUser(name, normalizedEmail, password, role)
-    toast({ title: 'Usuário cadastrado com sucesso!' })
+
+    toast({
+      title: 'Usuário cadastrado com sucesso!',
+      description: `Uma nova conta de ${role === 'admin' ? 'Administrador' : 'Colaborador'} foi criada com credenciais exclusivas.`,
+    })
     navigate('/admin/users')
   }
 
@@ -49,7 +55,9 @@ export default function RegisterUser() {
       <Card>
         <CardHeader>
           <CardTitle>Dados do Usuário</CardTitle>
-          <CardDescription>Cadastre um novo usuário com acesso ao sistema.</CardDescription>
+          <CardDescription>
+            Cadastre um novo usuário com acesso individual ao sistema.
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">

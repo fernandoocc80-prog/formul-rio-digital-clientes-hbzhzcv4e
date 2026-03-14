@@ -23,7 +23,6 @@ export default function Login() {
 
   useEffect(() => {
     // Zero Cache Persistence: Clear caches when visiting the login page to prevent residue
-    // This is safe because it only clears submission caches and session storage, not user auth databases
     clearCache()
     try {
       sessionStorage.clear()
@@ -41,12 +40,16 @@ export default function Login() {
     const normalizedEmail = email.trim().toLowerCase()
 
     try {
-      // Data Integrity on Login check happens inside the login context function
+      // Data Integrity & Multi-Admin Support: Login properly verifies unique credentials
       const user = await login(normalizedEmail, password)
 
       if (user) {
-        toast({ title: 'Login realizado com sucesso!' })
-        // Session Continuity: correctly redirect to the original requested page or workspace
+        toast({
+          title: `Bem-vindo(a), ${user.name}!`,
+          description: `Sessão iniciada como ${user.role === 'colaborador' ? 'Colaborador' : 'Administrador'}.`,
+        })
+
+        // Role-Based Access Control: ensure correct default dashboard routing
         const userRole = user.role || 'admin'
         const dest = userRole === 'colaborador' && from === '/' ? '/colaborador' : from
         navigate(dest, { replace: true })
@@ -65,6 +68,11 @@ export default function Login() {
     }
   }
 
+  const handleQuickFill = (testEmail: string) => {
+    setEmail(testEmail)
+    document.getElementById('password')?.focus()
+  }
+
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-slate-50">
       <div className="mb-8 flex items-center gap-2 text-primary font-bold text-2xl">
@@ -74,7 +82,9 @@ export default function Login() {
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 text-center">
           <CardTitle className="text-2xl">Acesso ao Sistema</CardTitle>
-          <CardDescription>Insira suas credenciais para acessar o painel</CardDescription>
+          <CardDescription>
+            Insira suas credenciais exclusivas para acessar o painel
+          </CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
@@ -91,7 +101,7 @@ export default function Login() {
               <Input
                 id="email"
                 type="email"
-                placeholder="usuario@empresaflow.com.br"
+                placeholder="seu.email@empresaflow.com.br"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoCapitalize="none"
@@ -127,14 +137,36 @@ export default function Login() {
             <div className="mt-6 text-center text-sm">
               <p className="text-muted-foreground mb-2">Nenhum usuário cadastrado.</p>
               <Link to="/register" className="text-blue-600 hover:underline font-medium">
-                Primeiro acesso? Crie uma conta de configuração.
+                Primeiro acesso? Crie a conta de administrador principal.
               </Link>
             </div>
           ) : (
-            <div className="mt-8 text-center text-xs text-muted-foreground bg-slate-100 p-3 rounded-md">
-              <p className="font-semibold mb-1">Dica de acesso para testes:</p>
-              <p className="font-mono">
-                {users[0]?.email || 'admin@empresaflow.com.br'} / [sua senha]
+            <div className="mt-8 text-center text-xs text-muted-foreground bg-slate-100/80 p-3 rounded-md border border-slate-200">
+              <p className="font-semibold mb-2 text-slate-700">Contas disponíveis para teste:</p>
+              <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
+                {users.slice(0, 4).map((u) => (
+                  <div
+                    key={u.id}
+                    className="flex justify-between items-center bg-white px-2.5 py-1.5 rounded-sm border border-slate-200 shadow-sm hover:border-blue-300 cursor-pointer transition-colors"
+                    onClick={() => handleQuickFill(u.email)}
+                    title="Clique para preencher o e-mail"
+                  >
+                    <span className="font-mono text-slate-800 truncate mr-2" title={u.email}>
+                      {u.email}
+                    </span>
+                    <span
+                      className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold shrink-0 ${u.role === 'colaborador' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
+                    >
+                      {u.role === 'colaborador' ? 'Colab' : 'Admin'}
+                    </span>
+                  </div>
+                ))}
+                {users.length > 4 && (
+                  <div className="text-slate-500 pt-1">... e mais {users.length - 4} contas</div>
+                )}
+              </div>
+              <p className="mt-3 text-[10px] text-slate-500">
+                Selecione uma conta acima e insira a respectiva senha cadastrada.
               </p>
             </div>
           )}
