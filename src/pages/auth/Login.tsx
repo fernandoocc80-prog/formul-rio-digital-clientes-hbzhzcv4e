@@ -1,24 +1,30 @@
 import { useState, useEffect } from 'react'
-import { useNavigate, Link } from 'react-router-dom'
+import { useNavigate, Link, useLocation } from 'react-router-dom'
 import { useAppStore } from '@/store/AppContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
+import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
-import { Building2 } from 'lucide-react'
+import { Building2, AlertCircle, Loader2 } from 'lucide-react'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
+  const [isLoading, setIsLoading] = useState(false)
+  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const { login, users, clearCache } = useAppStore()
   const navigate = useNavigate()
+  const location = useLocation()
   const { toast } = useToast()
 
+  const from = location.state?.from?.pathname || '/'
+
   useEffect(() => {
-    // Zero Cache Persistence: Clear all caches when visiting the login page to prevent residue
+    // Zero Cache Persistence: Clear caches when visiting the login page to prevent residue
+    // This is safe because it only clears submission caches and session storage, not user auth databases
     clearCache()
-    // Explicitly enforce session clearance just in case
     try {
       sessionStorage.clear()
     } catch (e) {
@@ -28,13 +34,32 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    // Data Integrity on Login check happens inside the login context function
-    const success = await login(email, password)
-    if (success) {
-      toast({ title: 'Login realizado com sucesso!' })
-      navigate('/')
-    } else {
-      toast({ title: 'Credenciais inválidas', variant: 'destructive' })
+    setErrorMsg(null)
+    setIsLoading(true)
+
+    // Ensure email has no trailing spaces from mobile keyboards and is lowercase
+    const normalizedEmail = email.trim().toLowerCase()
+
+    try {
+      // Data Integrity on Login check happens inside the login context function
+      const success = await login(normalizedEmail, password)
+
+      if (success) {
+        toast({ title: 'Login realizado com sucesso!' })
+        // Session Continuity: correctly redirect to the original requested page or dashboard
+        navigate(from, { replace: true })
+      } else {
+        setErrorMsg('Credenciais inválidas. Verifique seu e-mail e senha e tente novamente.')
+        toast({
+          title: 'Credenciais inválidas',
+          description: 'O e-mail ou a senha estão incorretos.',
+          variant: 'destructive',
+        })
+      }
+    } catch (err) {
+      setErrorMsg('Ocorreu um erro inesperado ao tentar fazer login.')
+    } finally {
+      setIsLoading(false)
     }
   }
 
@@ -51,6 +76,14 @@ export default function Login() {
         </CardHeader>
         <CardContent>
           <form onSubmit={handleLogin} className="space-y-4">
+            {errorMsg && (
+              <Alert variant="destructive" className="animate-in fade-in zoom-in-95 duration-200">
+                <AlertCircle className="h-4 w-4" />
+                <AlertTitle>Erro de Autenticação</AlertTitle>
+                <AlertDescription>{errorMsg}</AlertDescription>
+              </Alert>
+            )}
+
             <div className="space-y-2">
               <Label htmlFor="email">E-mail</Label>
               <Input
@@ -59,6 +92,10 @@ export default function Login() {
                 placeholder="admin@empresaflow.com.br"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect="off"
+                spellCheck="false"
                 required
               />
             </div>
@@ -70,11 +107,17 @@ export default function Login() {
                 placeholder="••••••••"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="current-password"
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
-              Entrar
+            <Button
+              type="submit"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              disabled={isLoading}
+            >
+              {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
+              {isLoading ? 'Entrando...' : 'Entrar'}
             </Button>
           </form>
 
@@ -88,7 +131,9 @@ export default function Login() {
           ) : (
             <div className="mt-8 text-center text-xs text-muted-foreground bg-slate-100 p-3 rounded-md">
               <p className="font-semibold mb-1">Dica de acesso para testes:</p>
-              <p className="font-mono">admin@empresaflow.com.br / admin123</p>
+              <p className="font-mono">
+                {users[0]?.email || 'admin@empresaflow.com.br'} / [sua senha]
+              </p>
             </div>
           )}
         </CardContent>

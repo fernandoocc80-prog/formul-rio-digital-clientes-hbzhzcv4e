@@ -36,9 +36,10 @@ export default function Register() {
       toast({ title: 'Senhas não conferem', variant: 'destructive' })
       return
     }
-    registerUser(name, email, password)
+    const normalizedEmail = email.trim().toLowerCase()
+    registerUser(name, normalizedEmail, password)
     toast({ title: 'Conta criada com sucesso!' })
-    await login(email, password)
+    await login(normalizedEmail, password)
     navigate('/')
   }
 
@@ -68,6 +69,10 @@ export default function Register() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect="off"
+                spellCheck="false"
                 required
               />
             </div>
@@ -78,6 +83,7 @@ export default function Register() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
                 required
               />
             </div>
@@ -88,6 +94,7 @@ export default function Register() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
                 required
               />
             </div>

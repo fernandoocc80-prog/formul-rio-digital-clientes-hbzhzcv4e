@@ -306,12 +306,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const login = useCallback(
     async (email: string, passwordHash: string) => {
-      const user = users.find((u) => u.email === email && u.passwordHash === passwordHash)
+      // Normalize email for mobile validation consistency (auto-cap, trailing spaces)
+      const normalizedEmail = email.trim().toLowerCase()
+
+      const user = users.find(
+        (u) => u.email.trim().toLowerCase() === normalizedEmail && u.passwordHash === passwordHash,
+      )
+
       if (user) {
         setCurrentUser(user)
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user))
 
         // Session Data Cleanup during authentication flow before redirect
+        // We only clear submission caches, not user data
         clearCache()
 
         try {
@@ -323,6 +330,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
 
         // Login Synchronization: Force fresh fetch, ignoring local state
+        // This ensures the "1 Registro Modelo" is loaded correctly from the server
         await syncSubmissions({ force: true, background: false, skipCache: true })
         return true
       }
@@ -350,8 +358,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     (name: string, email: string, passwordHash: string) => {
       const newUser: AdminUser = {
         id: `usr-${Math.random().toString(36).substring(2, 9)}`,
-        name,
-        email,
+        name: name.trim(),
+        email: email.trim().toLowerCase(),
         passwordHash,
         createdAt: new Date().toISOString(),
       }

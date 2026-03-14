@@ -23,7 +23,8 @@ export default function RegisterUser() {
       toast({ title: 'Senhas não conferem', variant: 'destructive' })
       return
     }
-    registerUser(name, email, password)
+    const normalizedEmail = email.trim().toLowerCase()
+    registerUser(name, normalizedEmail, password)
     toast({ title: 'Usuário administrador cadastrado com sucesso!' })
     navigate('/admin/users')
   }
@@ -55,6 +56,10 @@ export default function RegisterUser() {
                 type="email"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
+                autoCapitalize="none"
+                autoComplete="email"
+                autoCorrect="off"
+                spellCheck="false"
                 required
               />
             </div>
@@ -65,6 +70,7 @@ export default function RegisterUser() {
                 type="password"
                 value={password}
                 onChange={(e) => setPassword(e.target.value)}
+                autoComplete="new-password"
                 required
               />
             </div>
@@ -75,6 +81,7 @@ export default function RegisterUser() {
                 type="password"
                 value={confirmPassword}
                 onChange={(e) => setConfirmPassword(e.target.value)}
+                autoComplete="new-password"
                 required
               />
             </div>
