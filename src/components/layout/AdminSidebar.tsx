@@ -27,9 +27,17 @@ export function AdminSidebar() {
   const colaboradorItems = [
     { title: 'Início', icon: LayoutDashboard, path: '/colaborador' },
     { title: 'Novo Formulário', icon: PlusCircle, path: '/form/new' },
+    { title: 'Histórico de Retornos', icon: History, path: '/colaborador?tab=returns' },
   ]
 
   const menuItems = role === 'colaborador' ? colaboradorItems : adminItems
+
+  const getIsActive = (path: string) => {
+    const currentPathWithSearch = location.pathname + location.search
+    if (path === '/colaborador' && currentPathWithSearch.includes('tab=')) return false
+    if (path.includes('?')) return currentPathWithSearch === path
+    return location.pathname === path
+  }
 
   return (
     <Sidebar className="no-print">
@@ -40,7 +48,7 @@ export function AdminSidebar() {
             <SidebarMenu>
               {menuItems.map((item) => (
                 <SidebarMenuItem key={item.title}>
-                  <SidebarMenuButton asChild isActive={location.pathname === item.path}>
+                  <SidebarMenuButton asChild isActive={getIsActive(item.path)}>
                     <Link to={item.path}>
                       <item.icon />
                       <span>{item.title}</span>

@@ -53,6 +53,7 @@ const App = () => (
 
               <Route element={<ProtectedRoute allowedRoles={['colaborador']} />}>
                 <Route path="/colaborador" element={<ColaboradorHome />} />
+                <Route path="/colaborador/:id" element={<SubmissionDetail />} />
               </Route>
             </Route>
           </Route>
