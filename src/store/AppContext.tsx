@@ -160,8 +160,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             Pragma: 'no-cache',
             Expires: '0',
           },
-        }).catch(() => {})
-      } catch (e) {}
+        }).catch(() => {
+          // Ignore fetch rejections gracefully
+        })
+      } catch (e) {
+        // Safe fallback in case of strict network failures or CSP blocks
+      }
 
       const serverData = getDB()
 
@@ -225,7 +229,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           syncSubmissions({ force: true })
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      // Ignored if BroadcastChannel is not supported by environment
+    }
 
     window.addEventListener('focus', handleFocus)
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -267,9 +273,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
       channel.close()
-    } catch (e) {}
+    } catch (e) {
+      // Ignored if BroadcastChannel is not supported by environment
+    }
 
-    syncSubmissions({ force: true }).catch(() => {})
+    syncSubmissions({ force: true }).catch(() => {
+      // Ignored explicit sync failure
+    })
     return newId
   }
 
@@ -285,7 +295,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
       channel.close()
-    } catch (e) {}
+    } catch (e) {
+      // Ignored if BroadcastChannel is not supported by environment
+    }
 
     await syncSubmissions({ force: true })
   }
