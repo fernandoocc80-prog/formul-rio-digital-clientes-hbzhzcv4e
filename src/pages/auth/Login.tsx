@@ -18,6 +18,12 @@ export default function Login() {
   useEffect(() => {
     // Zero Cache Persistence: Clear all caches when visiting the login page to prevent residue
     clearCache()
+    // Explicitly enforce session clearance just in case
+    try {
+      sessionStorage.clear()
+    } catch (e) {
+      /* ignore */
+    }
   }, [clearCache])
 
   const handleLogin = async (e: React.FormEvent) => {

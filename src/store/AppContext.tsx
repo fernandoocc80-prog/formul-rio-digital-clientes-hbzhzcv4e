@@ -9,9 +9,8 @@ import React, {
 } from 'react'
 import { Submission, AdminUser } from '@/types'
 
-// Version bumped to v4 to enforce Database Hard Reset across all devices
-const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v4'
-const LOCAL_CACHE_KEY = 'empresaflow_submissions_cache_v4'
+// Version bumped to v5 to enforce Database Hard Reset across all devices
+const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v5'
 const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
 const USERS_STORAGE_KEY = 'empresaflow_users_v1'
 const CURRENT_USER_KEY = 'empresaflow_current_user_v1'
@@ -20,14 +19,19 @@ const CURRENT_USER_KEY = 'empresaflow_current_user_v1'
 // This ensures the "Source of Truth" purges all old disjointed records on fresh loads
 if (typeof window !== 'undefined') {
   try {
-    localStorage.removeItem('empresaflow_remote_db_v1')
-    localStorage.removeItem('empresaflow_submissions_cache_v1')
-    localStorage.removeItem('empresaflow_remote_db_v2')
-    localStorage.removeItem('empresaflow_submissions_cache_v2')
-    localStorage.removeItem('empresaflow_remote_db_v3')
-    localStorage.removeItem('empresaflow_submissions_cache_v3')
-    localStorage.removeItem(LOCAL_CACHE_KEY)
-    sessionStorage.removeItem(LOCAL_CACHE_KEY)
+    const legacyKeys = [
+      'empresaflow_remote_db_v1',
+      'empresaflow_remote_db_v2',
+      'empresaflow_remote_db_v3',
+      'empresaflow_remote_db_v4',
+      'empresaflow_submissions_cache_v1',
+      'empresaflow_submissions_cache_v2',
+      'empresaflow_submissions_cache_v3',
+      'empresaflow_submissions_cache_v4',
+      'empresaflow_submissions_cache_v5',
+    ]
+    legacyKeys.forEach((k) => localStorage.removeItem(k))
+    sessionStorage.clear()
   } catch (e) {
     /* ignore */
   }
@@ -133,7 +137,7 @@ const getUsersDB = (): AdminUser[] => {
   } catch (e) {
     console.warn('Could not parse users local storage', e)
   }
-  return [] // No default users to allow clean registration flow
+  return []
 }
 
 const getCurrentUserDB = (): AdminUser | null => {
@@ -149,9 +153,8 @@ const getCurrentUserDB = (): AdminUser | null => {
 const AppContext = createContext<AppState | undefined>(undefined)
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [submissions, setSubmissions] = useState<Submission[]>(() => {
-    return getRemoteDB()
-  })
+  // Stateless Data Fetching: We no longer initialize from local cache. Starts empty.
+  const [submissions, setSubmissions] = useState<Submission[]>([])
 
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle')
   const [syncError, setSyncError] = useState<string | null>(null)
@@ -170,14 +173,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const clearCache = useCallback(() => {
     try {
-      localStorage.removeItem(LOCAL_CACHE_KEY)
-      sessionStorage.removeItem(LOCAL_CACHE_KEY)
-      localStorage.removeItem('empresaflow_remote_db_v1')
-      localStorage.removeItem('empresaflow_remote_db_v2')
-      localStorage.removeItem('empresaflow_remote_db_v3')
-      localStorage.removeItem('empresaflow_submissions_cache_v1')
-      localStorage.removeItem('empresaflow_submissions_cache_v2')
-      localStorage.removeItem('empresaflow_submissions_cache_v3')
+      sessionStorage.clear()
+      const keys = Object.keys(localStorage)
+      for (const k of keys) {
+        if (k.startsWith('empresaflow_submissions_cache')) {
+          localStorage.removeItem(k)
+        }
+      }
     } catch (e) {
       /* ignore */
     }
@@ -206,22 +208,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           clearCache()
         }
 
-        if (!options?.background && options?.force) {
-          await new Promise((resolve) => setTimeout(resolve, 300))
-        }
-
         const serverData = await fetchFromServerMock()
 
-        setSubmissions((prev) => {
-          const isDifferent = JSON.stringify(prev) !== JSON.stringify(serverData)
-          if (isDifferent || options?.skipCache) {
-            localStorage.setItem(LOCAL_CACHE_KEY, JSON.stringify(serverData))
-            return [...serverData]
-          }
-          return prev
-        })
-
+        // Directly apply the server's single source of truth without relying on persistent cache
+        setSubmissions([...serverData])
         setLastSyncAt(new Date())
+
         setSyncStatus((prev) =>
           options?.background && prev !== 'syncing' && prev !== 'error' ? prev : 'idle',
         )
@@ -267,6 +259,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const updatedDB = [newSubmission, ...remoteDB]
       saveRemoteDB(updatedDB)
+      setSubmissions(updatedDB)
 
       try {
         const channel = new BroadcastChannel('empresaflow_notifications')
@@ -291,6 +284,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s,
       )
       saveRemoteDB(updatedDB)
+      setSubmissions(updatedDB)
 
       try {
         const channel = new BroadcastChannel('empresaflow_notifications')
@@ -403,7 +397,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     let channel: BroadcastChannel | null = null
     try {
-      // Real-time Hub Integrity initialization
       channel = new BroadcastChannel('empresaflow_notifications')
       channel.onmessage = (event) => {
         if (
@@ -430,10 +423,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [syncSubmissions])
 
+  // Initial fetch on mount to guarantee state matches server DB
+  useEffect(() => {
+    syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
+  }, [syncSubmissions])
+
+  // Admin polling and focused synchronization
   useEffect(() => {
     if (!currentUser) return
-
-    syncSubmissions({ force: true, background: true, skipCache: true })
 
     const intervalId = setInterval(() => {
       syncSubmissions({ background: true })

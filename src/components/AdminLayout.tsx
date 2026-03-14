@@ -17,7 +17,8 @@ export default function AdminLayout() {
   useEffect(() => {
     if (currentUser) {
       clearCache()
-      syncSubmissions({ force: true, background: false, skipCache: true }).catch(() => {
+      // Enforce real-time sync with backend to maintain strictly verified view state
+      syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {
         /* ignore */
       })
     }
