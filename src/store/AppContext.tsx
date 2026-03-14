@@ -21,7 +21,7 @@ interface AppState {
   updateSubmission: (id: string, data: Partial<Submission>) => Promise<void>
   getSubmission: (id: string) => Submission | undefined
   updateEmailTemplate: (template: string) => void
-  syncSubmissions: (options?: { force?: boolean }) => Promise<void>
+  syncSubmissions: (options?: { force?: boolean; background?: boolean }) => Promise<void>
   login: (email: string, passwordHash: string) => boolean
   logout: () => void
   registerUser: (name: string, email: string, passwordHash: string) => void
@@ -131,101 +131,87 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     )
   })
 
-  // Synchronize with centralized data source, ensuring cache is bypassed and data is fresh
-  const syncSubmissions = useCallback(async (options?: { force?: boolean }) => {
-    if (!navigator.onLine) {
-      setSyncStatus('error')
-      setSyncError('Você está offline.')
-      return
-    }
+  // Feature: Data listener detecting changes in the DB and updating state immediately without flickering
+  const syncSubmissions = useCallback(
+    async (options?: { force?: boolean; background?: boolean }) => {
+      if (!navigator.onLine) {
+        if (!options?.background) {
+          setSyncStatus('error')
+          setSyncError('Você está offline.')
+        }
+        return
+      }
 
-    if (syncInProgress.current && !options?.force) return
-    syncInProgress.current = true
+      if (syncInProgress.current && !options?.force) return
+      syncInProgress.current = true
 
-    setSyncStatus('syncing')
-    setSyncError(null)
-
-    try {
-      await new Promise((resolve) => setTimeout(resolve, options?.force ? 400 : 200))
-
-      const cacheBuster = new Date().getTime().toString()
-      const _simulatedFetchUrl = `/api/sync?_t=${cacheBuster}`
+      if (!options?.background) {
+        setSyncStatus('syncing')
+        setSyncError(null)
+      }
 
       try {
-        await fetch(_simulatedFetchUrl, {
-          method: 'GET',
-          cache: 'no-store',
-          headers: {
-            'Cache-Control': 'no-cache, no-store, must-revalidate',
-            Pragma: 'no-cache',
-            Expires: '0',
-          },
-        }).catch(() => {
-          // Ignore fetch rejections gracefully
-        })
-      } catch (e) {
-        // Safe fallback in case of strict network failures or CSP blocks
-      }
-
-      const serverData = getDB()
-
-      setSubmissions((prev) => {
-        const isCountDifferent = prev.length !== serverData.length
-        const isDataDifferent = prev.some(
-          (p, i) =>
-            p.id !== serverData[i]?.id ||
-            p.updatedAt !== serverData[i]?.updatedAt ||
-            p.status !== serverData[i]?.status,
-        )
-
-        if (isCountDifferent || isDataDifferent || options?.force) {
-          return [...serverData]
+        if (!options?.background && options?.force) {
+          await new Promise((resolve) => setTimeout(resolve, 300))
         }
-        return prev
-      })
 
-      setLastSyncAt(new Date())
-      setSyncStatus('idle')
+        // Read from the simulated external source (acts as DB truth)
+        const serverData = getDB()
 
-      if (!localStorage.getItem(LOCAL_STORAGE_KEY)) {
-        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serverData))
+        setSubmissions((prev) => {
+          const isCountDifferent = prev.length !== serverData.length
+          const isDataDifferent = prev.some(
+            (p, i) =>
+              p.id !== serverData[i]?.id ||
+              p.updatedAt !== serverData[i]?.updatedAt ||
+              p.status !== serverData[i]?.status,
+          )
+
+          // Feature: Source of truth mapping
+          // We only overwrite the local array reference if data genuinely changed to avoid UI flickering
+          if (isCountDifferent || isDataDifferent) {
+            return [...serverData]
+          }
+          return prev
+        })
+
+        setLastSyncAt(new Date())
+        setSyncStatus((prev) => {
+          if (options?.background && prev !== 'syncing' && prev !== 'error') {
+            return prev
+          }
+          return 'idle'
+        })
+        setSyncError(null)
+
+        if (!localStorage.getItem(LOCAL_STORAGE_KEY)) {
+          localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serverData))
+        }
+      } catch (error) {
+        console.error('Failed to sync:', error)
+        if (!options?.background) {
+          setSyncStatus('error')
+          setSyncError('Falha ao conectar.')
+        }
+      } finally {
+        syncInProgress.current = false
       }
-    } catch (error) {
-      console.error('Failed to sync:', error)
-      setSyncStatus('error')
-      setSyncError('Falha ao conectar.')
-    } finally {
-      syncInProgress.current = false
-    }
-  }, [])
+    },
+    [],
+  )
 
   useEffect(() => {
     localStorage.setItem(EMAIL_TEMPLATE_KEY, emailTemplate)
   }, [emailTemplate])
 
-  // Subscriptions and Real-Time Fetching
+  // Feature: Auth State Parity & Global Cross-Device Consistency events
   useEffect(() => {
-    // Feature: Route Protection & Sync - Only sync when valid admin user is logged in
-    if (!currentUser) return
-
-    syncSubmissions({ force: true })
-
-    // Feature: Real-Time Updates within 2 seconds
-    const intervalId = setInterval(() => {
-      syncSubmissions()
-    }, 2000)
-
-    // Feature: Window Focus Revalidation
-    const handleFocus = () => syncSubmissions({ force: true })
-    const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') syncSubmissions({ force: true })
-    }
-
-    // Storage event ensures cross-tab synchronization immediately
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === LOCAL_STORAGE_KEY) {
-        syncSubmissions({ force: true })
-      }
+      if (e.key === CURRENT_USER_KEY) setCurrentUser(getCurrentUserDB())
+      if (e.key === USERS_STORAGE_KEY) setUsers(getUsersDB())
+      if (e.key === EMAIL_TEMPLATE_KEY)
+        setEmailTemplate(localStorage.getItem(EMAIL_TEMPLATE_KEY) || '')
+      if (e.key === LOCAL_STORAGE_KEY) syncSubmissions({ force: true, background: true })
     }
 
     let channel: BroadcastChannel | null = null
@@ -233,24 +219,49 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       channel = new BroadcastChannel('empresaflow_notifications')
       channel.onmessage = (event) => {
         if (event.data?.type === 'NEW_SUBMISSION' || event.data?.type === 'UPDATE_SUBMISSION') {
-          syncSubmissions({ force: true })
+          syncSubmissions({ force: true, background: true })
+        } else if (event.data?.type === 'AUTH_STATE_CHANGE') {
+          setCurrentUser(getCurrentUserDB())
+        } else if (event.data?.type === 'USERS_STATE_CHANGE') {
+          setUsers(getUsersDB())
         }
       }
     } catch (e) {
       // Ignored if BroadcastChannel is not supported by environment
     }
 
-    window.addEventListener('focus', handleFocus)
-    document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('storage', handleStorageChange)
 
-    // Ensure listeners are cleaned up when user logs out or closes app
+    return () => {
+      window.removeEventListener('storage', handleStorageChange)
+      if (channel) channel.close()
+    }
+  }, [syncSubmissions])
+
+  // Feature: Dashboard Synchronization Polling
+  useEffect(() => {
+    if (!currentUser) return
+
+    // Ensure state is fresh when user mounts context (e.g. login)
+    syncSubmissions({ force: true, background: true })
+
+    // Database polling equivalent: Check for updates across sessions every 2s in background
+    const intervalId = setInterval(() => {
+      syncSubmissions({ background: true })
+    }, 2000)
+
+    const handleFocus = () => syncSubmissions({ background: true })
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible') syncSubmissions({ background: true })
+    }
+
+    window.addEventListener('focus', handleFocus)
+    document.addEventListener('visibilitychange', handleVisibilityChange)
+
     return () => {
       clearInterval(intervalId)
       window.removeEventListener('focus', handleFocus)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('storage', handleStorageChange)
-      if (channel) channel.close()
     }
   }, [syncSubmissions, currentUser])
 
@@ -275,7 +286,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const currentDB = getDB()
     const updatedDB = [newSubmission, ...currentDB]
 
-    // Feature: Global State Integrity - Update instantly in current context
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
     setSubmissions(updatedDB)
 
@@ -283,14 +293,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
       channel.close()
-    } catch (e) {
-      // Ignored if BroadcastChannel is not supported by environment
-    }
+    } catch (e) {}
 
     if (currentUser) {
-      syncSubmissions({ force: true }).catch(() => {
-        // Ignored explicit sync failure
-      })
+      syncSubmissions({ force: true, background: true }).catch(() => {})
     }
     return newId
   }
@@ -301,7 +307,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s,
     )
 
-    // Feature: Global State Integrity - Update instantly in current context
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
     setSubmissions(updatedDB)
 
@@ -309,18 +314,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
       channel.close()
-    } catch (e) {
-      // Ignored if BroadcastChannel is not supported by environment
-    }
+    } catch (e) {}
 
     if (currentUser) {
-      await syncSubmissions({ force: true })
+      await syncSubmissions({ force: true, background: true })
     }
   }
 
   const getSubmission = (id: string) => submissions.find((s) => s.id === id)
-
-  const updateEmailTemplate = (template: string) => setEmailTemplate(template)
 
   const login = useCallback(
     (email: string, passwordHash: string) => {
@@ -328,6 +329,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (user) {
         setCurrentUser(user)
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user))
+        try {
+          const channel = new BroadcastChannel('empresaflow_notifications')
+          channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
+          channel.close()
+        } catch (e) {}
         return true
       }
       return false
@@ -338,6 +344,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const logout = useCallback(() => {
     setCurrentUser(null)
     localStorage.removeItem(CURRENT_USER_KEY)
+    try {
+      const channel = new BroadcastChannel('empresaflow_notifications')
+      channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
+      channel.close()
+    } catch (e) {}
   }, [])
 
   const registerUser = useCallback(
@@ -352,6 +363,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const updatedUsers = [...users, newUser]
       setUsers(updatedUsers)
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers))
+      try {
+        const channel = new BroadcastChannel('empresaflow_notifications')
+        channel.postMessage({ type: 'USERS_STATE_CHANGE' })
+        channel.close()
+      } catch (e) {}
     },
     [users],
   )
@@ -361,6 +377,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const updatedUsers = users.filter((u) => u.id !== id)
       setUsers(updatedUsers)
       localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers))
+      try {
+        const channel = new BroadcastChannel('empresaflow_notifications')
+        channel.postMessage({ type: 'USERS_STATE_CHANGE' })
+        channel.close()
+      } catch (e) {}
     },
     [users],
   )

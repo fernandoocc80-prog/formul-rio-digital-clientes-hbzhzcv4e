@@ -13,9 +13,9 @@ export default function Index() {
   const navigate = useNavigate()
   const { submissions, syncSubmissions, currentUser } = useAppStore()
 
-  // Real-Time Data Revalidation: ensure data is always the most recent version on mount
+  // Real-Time Data Revalidation: ensure data is always the most recent version on mount seamlessly
   useEffect(() => {
-    syncSubmissions({ force: true })
+    syncSubmissions({ force: true, background: true })
   }, [syncSubmissions])
 
   const handleCreateForm = () => {
