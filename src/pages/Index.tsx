@@ -15,7 +15,7 @@ export default function Index() {
 
   // Real-Time Data Revalidation & Cache Invalidation: ensure data is always the most recent version on mount
   useEffect(() => {
-    syncSubmissions({ force: true, background: true, skipCache: true })
+    syncSubmissions({ force: true, background: false, skipCache: true })
   }, [syncSubmissions])
 
   const handleCreateForm = () => {

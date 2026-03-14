@@ -9,9 +9,9 @@ import React, {
 } from 'react'
 import { Submission, AdminUser } from '@/types'
 
-// Version bumped to v3 to enforce Database Hard Reset across all devices
-const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v3'
-const LOCAL_CACHE_KEY = 'empresaflow_submissions_cache_v3'
+// Version bumped to v4 to enforce Database Hard Reset across all devices
+const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v4'
+const LOCAL_CACHE_KEY = 'empresaflow_submissions_cache_v4'
 const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
 const USERS_STORAGE_KEY = 'empresaflow_users_v1'
 const CURRENT_USER_KEY = 'empresaflow_current_user_v1'
@@ -24,6 +24,8 @@ if (typeof window !== 'undefined') {
     localStorage.removeItem('empresaflow_submissions_cache_v1')
     localStorage.removeItem('empresaflow_remote_db_v2')
     localStorage.removeItem('empresaflow_submissions_cache_v2')
+    localStorage.removeItem('empresaflow_remote_db_v3')
+    localStorage.removeItem('empresaflow_submissions_cache_v3')
     localStorage.removeItem(LOCAL_CACHE_KEY)
     sessionStorage.removeItem(LOCAL_CACHE_KEY)
   } catch (e) {
@@ -60,7 +62,7 @@ const mockData: Submission[] = [
   {
     id: 'sub-model-1',
     protocol: '2023-11-01-0001',
-    clientName: 'Cliente Modelo',
+    clientName: 'Modelo de Formulário',
     status: 'approved',
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
@@ -148,12 +150,6 @@ const AppContext = createContext<AppState | undefined>(undefined)
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [submissions, setSubmissions] = useState<Submission[]>(() => {
-    try {
-      const cached = localStorage.getItem(LOCAL_CACHE_KEY)
-      if (cached) return JSON.parse(cached)
-    } catch (e) {
-      /* ignore */
-    }
     return getRemoteDB()
   })
 
@@ -176,6 +172,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       localStorage.removeItem(LOCAL_CACHE_KEY)
       sessionStorage.removeItem(LOCAL_CACHE_KEY)
+      localStorage.removeItem('empresaflow_remote_db_v1')
+      localStorage.removeItem('empresaflow_remote_db_v2')
+      localStorage.removeItem('empresaflow_remote_db_v3')
+      localStorage.removeItem('empresaflow_submissions_cache_v1')
+      localStorage.removeItem('empresaflow_submissions_cache_v2')
+      localStorage.removeItem('empresaflow_submissions_cache_v3')
     } catch (e) {
       /* ignore */
     }
@@ -315,7 +317,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setCurrentUser(user)
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user))
 
-        // Session Data Cleanup during authentication flow
+        // Session Data Cleanup during authentication flow before redirect
         clearCache()
 
         try {

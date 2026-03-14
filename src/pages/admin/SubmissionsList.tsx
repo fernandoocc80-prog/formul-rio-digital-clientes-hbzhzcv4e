@@ -59,11 +59,11 @@ export default function SubmissionsList() {
   const [typeFilter, setTypeFilter] = useState('all')
 
   // Feature: Unified List Querying & Real-time Reflection
-  // Fetch fresh data and reset filters to guarantee UI Integrity
+  // Fetch fresh data bypassing cache to guarantee UI Integrity on mount
   useEffect(() => {
     setStatusFilter('all')
     setTypeFilter('all')
-    syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
+    syncSubmissions({ force: true, background: false, skipCache: true }).catch(() => {})
   }, [syncSubmissions])
 
   const filtered = submissions.filter((s) => {
