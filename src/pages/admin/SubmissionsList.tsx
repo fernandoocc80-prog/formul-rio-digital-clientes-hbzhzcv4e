@@ -125,12 +125,16 @@ export default function SubmissionsList() {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Gestão de Formulários</h1>
+            {/* Visual Accuracy: Ensure the total list items identically match dashboard summary counters */}
+            <Badge variant="outline" className="bg-white dark:bg-slate-950 font-mono text-sm px-2">
+              Total: {submissions.length} Processo{submissions.length !== 1 && 's'}
+            </Badge>
             <div className="hidden sm:block">
               <SyncIndicator />
             </div>
           </div>
           <p className="text-muted-foreground">
-            Acompanhe e gerencie as solicitações de abertura de empresa.
+            Acompanhe e gerencie as solicitações de abertura de empresa em tempo real.
           </p>
         </div>
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
@@ -172,7 +176,7 @@ export default function SubmissionsList() {
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle>Todos os Processos</CardTitle>
+          <CardTitle>Todos os Processos ({filtered.length})</CardTitle>
           <Button
             variant="ghost"
             size="sm"

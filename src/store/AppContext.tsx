@@ -109,18 +109,20 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       // Enforce State Integrity: Bypass local browser cache completely
       // Ensuring dashboard reflects the most current database state
-      const cacheBuster = Date.now()
+      const cacheBuster = new Date().getTime().toString()
       const _simulatedFetchUrl = `/api/sync?_t=${cacheBuster}`
 
       try {
         await fetch(_simulatedFetchUrl, {
+          method: 'GET',
           cache: 'no-store',
           headers: {
-            'Cache-Control': 'no-cache',
+            'Cache-Control': 'no-cache, no-store, must-revalidate',
             Pragma: 'no-cache',
+            Expires: '0',
           },
         }).catch(() => {
-          // ignore error
+          // ignore error since it's a simulated endpoint
         })
       } catch (e) {
         // ignore error
@@ -128,9 +130,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const serverData = getDB()
 
-      // Prioritize server-side truth: force state update with strict parity
-      // Eliminates discrepancies across views/devices
-      setSubmissions([...serverData])
+      // Integrity Validation: background check comparing local state count with server's record.
+      // If a discrepancy is detected (count mismatch or state difference), force an immediate update to match the server.
+      setSubmissions((prev) => {
+        const isCountDifferent = prev.length !== serverData.length
+        const isDataDifferent = prev.some(
+          (p, i) =>
+            p.id !== serverData[i]?.id ||
+            p.updatedAt !== serverData[i]?.updatedAt ||
+            p.status !== serverData[i]?.status,
+        )
+
+        if (isCountDifferent || isDataDifferent || options?.force) {
+          return [...serverData]
+        }
+        return prev
+      })
 
       setLastSyncAt(new Date())
       setSyncStatus('idle')
@@ -152,12 +167,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [emailTemplate])
 
   useEffect(() => {
+    // Initial sync
     syncSubmissions({ force: true })
 
+    // Frequent background polling for cross-device consistency (acting as global state reconciliation)
     const intervalId = setInterval(() => {
       syncSubmissions()
-    }, 10000)
+    }, 5000) // Increased frequency to 5s for near real-time updates without WebSockets
 
+    // Automatic state revalidation on window/tab focus
     const handleFocus = () => syncSubmissions({ force: true })
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') syncSubmissions({ force: true })
@@ -216,8 +234,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const updatedDB = [newSubmission, ...currentDB]
 
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
-    setSubmissions(updatedDB)
 
+    // Broadcast immediately so other instances get the new count right away
     try {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
@@ -239,7 +257,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     )
 
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
-    setSubmissions(updatedDB)
 
     try {
       const channel = new BroadcastChannel('empresaflow_notifications')
