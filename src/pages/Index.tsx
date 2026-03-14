@@ -1,3 +1,4 @@
+import { useEffect } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
 import { PlusCircle, FileText, Activity, Clock, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
@@ -10,7 +11,12 @@ import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
 
 export default function Index() {
   const navigate = useNavigate()
-  const { submissions } = useAppStore()
+  const { submissions, syncSubmissions } = useAppStore()
+
+  // Real-Time Data Revalidation: ensure data is always the most recent version on mount
+  useEffect(() => {
+    syncSubmissions({ force: true })
+  }, [syncSubmissions])
 
   const handleCreateForm = () => {
     navigate('/form/new')
