@@ -177,7 +177,7 @@ export default function SubmissionsList() {
             variant="ghost"
             size="sm"
             className="sm:hidden -mr-2"
-            onClick={syncSubmissions}
+            onClick={() => syncSubmissions({ force: true })}
             disabled={syncStatus === 'syncing'}
           >
             <RefreshCw className={cn('h-4 w-4', syncStatus === 'syncing' && 'animate-spin')} />

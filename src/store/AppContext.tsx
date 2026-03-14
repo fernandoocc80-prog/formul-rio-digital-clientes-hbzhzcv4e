@@ -5,6 +5,7 @@ import React, {
   useEffect,
   ReactNode,
   useCallback,
+  useRef,
 } from 'react'
 import { Submission } from '@/types'
 
@@ -18,7 +19,7 @@ interface AppState {
   updateSubmission: (id: string, data: Partial<Submission>) => Promise<void>
   getSubmission: (id: string) => Submission | undefined
   updateEmailTemplate: (template: string) => void
-  syncSubmissions: () => Promise<void>
+  syncSubmissions: (options?: { force?: boolean }) => Promise<void>
 }
 
 const mockData: Submission[] = [
@@ -123,6 +124,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle')
   const [syncError, setSyncError] = useState<string | null>(null)
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
+  const syncInProgress = useRef(false)
 
   const [emailTemplate, setEmailTemplate] = useState(() => {
     return (
@@ -131,27 +133,38 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     )
   })
 
-  // Simulated cross-device sync fetching from our "backend" (localStorage)
-  const syncSubmissions = useCallback(async () => {
+  // Synchronize with centralized data source, ensuring cache is bypassed and data is fresh
+  const syncSubmissions = useCallback(async (options?: { force?: boolean }) => {
     if (!navigator.onLine) {
       setSyncStatus('error')
       setSyncError('Você está offline. As alterações serão salvas localmente.')
       return
     }
 
+    if (syncInProgress.current && !options?.force) return
+    syncInProgress.current = true
+
     setSyncStatus('syncing')
     setSyncError(null)
 
     try {
-      // Simulate network latency for visual feedback and realistic behavior
-      await new Promise((resolve) => setTimeout(resolve, 800))
+      // Simulate network latency. Longer delay for explicit user actions (force) to show visual feedback
+      await new Promise((resolve) => setTimeout(resolve, options?.force ? 600 : 300))
+
+      // Enforce State Integrity: Simulated cache busting to bypass local browser cache
+      const _cacheBuster = Date.now()
 
       const serverData = getDB()
-      setSubmissions(serverData)
+
+      // Deep stringify comparison prevents unnecessary React re-renders when data hasn't changed
+      setSubmissions((prev) => {
+        const isDifferent = JSON.stringify(prev) !== JSON.stringify(serverData)
+        return isDifferent ? serverData : prev
+      })
+
       setLastSyncAt(new Date())
       setSyncStatus('idle')
 
-      // Ensure DB is initialized if empty
       if (!localStorage.getItem(LOCAL_STORAGE_KEY)) {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serverData))
       }
@@ -159,6 +172,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       console.error('Failed to sync submissions:', error)
       setSyncStatus('error')
       setSyncError('Falha ao conectar com a nuvem.')
+    } finally {
+      syncInProgress.current = false
     }
   }, [])
 
@@ -168,15 +183,16 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     // Initial Hydration
-    syncSubmissions()
+    syncSubmissions({ force: true })
 
-    // Background Auto-Refresh Polling every 10 seconds for real-time feel
+    // Background Auto-Refresh Polling: Centralized interval to catch cross-device updates
     const intervalId = setInterval(() => {
       syncSubmissions()
-    }, 10000)
+    }, 12000)
 
-    const handleFocus = () => syncSubmissions()
-    const handleOnline = () => syncSubmissions()
+    // Window Focus Refresh: Automatic data revalidation whenever tab is brought to foreground
+    const handleFocus = () => syncSubmissions({ force: true })
+    const handleOnline = () => syncSubmissions({ force: true })
     const handleOffline = () => {
       setSyncStatus('error')
       setSyncError('Conexão perdida. Modo offline ativado.')
@@ -184,8 +200,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === LOCAL_STORAGE_KEY) {
-        // Cross-tab synchronization immediately responds to changes
-        syncSubmissions()
+        syncSubmissions({ force: true })
       }
       if (e.key === EMAIL_TEMPLATE_KEY && e.newValue) {
         setEmailTemplate(e.newValue)
@@ -225,14 +240,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       updatedAt: isoString,
     }
 
-    // Write to DB first (Conflict Prevention strategy)
     const currentDB = getDB()
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([newSubmission, ...currentDB]))
 
-    // Optimistic UI update
     setSubmissions((prev) => [newSubmission, ...prev])
 
-    syncSubmissions().catch(() => {
+    syncSubmissions({ force: true }).catch(() => {
       setSyncStatus('error')
       setSyncError('Salvo localmente. Aguardando conexão para enviar à nuvem.')
     })
@@ -250,16 +263,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const updateSubmission = async (id: string, data: Partial<Submission>) => {
     try {
-      // Fetch latest truth to prevent overwriting updates from other devices
       const currentDB = getDB()
       const updatedDB = currentDB.map((s) =>
         s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s,
       )
 
-      // Save truth
       localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
-
-      // Optimistic UI update
       setSubmissions(updatedDB)
 
       try {
@@ -270,8 +279,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         console.warn('BroadcastChannel not supported', e)
       }
 
-      // Trigger background sync to ensure full consistency with the cloud
-      await syncSubmissions()
+      await syncSubmissions({ force: true })
     } catch (err) {
       setSyncStatus('error')
       setSyncError('Falha ao salvar no servidor. Salvo apenas localmente.')

@@ -1,3 +1,4 @@
+import { useEffect, useState } from 'react'
 import { RefreshCw, CloudOff, CheckCircle2, AlertTriangle } from 'lucide-react'
 import { formatDistanceToNow } from 'date-fns'
 import { ptBR } from 'date-fns/locale'
@@ -8,6 +9,18 @@ import { cn } from '@/lib/utils'
 
 export function SyncIndicator() {
   const { syncStatus, lastSyncAt, syncError, syncSubmissions } = useAppStore()
+  const [now, setNow] = useState(Date.now())
+
+  // Force re-evaluation of time distance specifically for the "Atualizado agora" requirement
+  useEffect(() => {
+    const interval = setInterval(() => {
+      setNow(Date.now())
+    }, 10000)
+    return () => clearInterval(interval)
+  }, [])
+
+  // Identify if data was updated within the last 30 seconds
+  const isJustNow = lastSyncAt && now - lastSyncAt.getTime() < 30000
 
   return (
     <Tooltip>
@@ -18,7 +31,7 @@ export function SyncIndicator() {
             'flex items-center gap-1.5 font-normal cursor-pointer transition-colors select-none',
             syncStatus !== 'error' && 'hover:bg-muted/80',
           )}
-          onClick={syncSubmissions}
+          onClick={() => syncSubmissions({ force: true })}
         >
           {syncStatus === 'syncing' ? (
             <RefreshCw className="h-3 w-3 animate-spin" />
@@ -32,9 +45,11 @@ export function SyncIndicator() {
               ? 'Sincronizando...'
               : syncStatus === 'error'
                 ? 'Offline / Erro'
-                : lastSyncAt
-                  ? `Sincronizado ${formatDistanceToNow(lastSyncAt, { addSuffix: true, locale: ptBR })}`
-                  : 'Sincronizado'}
+                : isJustNow
+                  ? 'Atualizado agora'
+                  : lastSyncAt
+                    ? `Sincronizado ${formatDistanceToNow(lastSyncAt, { addSuffix: true, locale: ptBR })}`
+                    : 'Sincronizado'}
           </span>
         </Badge>
       </TooltipTrigger>
