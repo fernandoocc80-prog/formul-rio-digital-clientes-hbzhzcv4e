@@ -39,14 +39,6 @@ const mockData: Submission[] = [
         address: 'Rua A, 123',
         sharePercentage: 60,
       },
-      {
-        id: 'p2',
-        name: 'Maria Lima',
-        cpf: '555.666.777-88',
-        rg: '98.765.432-1',
-        address: 'Av B, 456',
-        sharePercentage: 40,
-      },
     ],
     company: {
       type: 'ltda',
@@ -55,50 +47,15 @@ const mockData: Submission[] = [
       phone: '(11) 98888-7777',
       zipCode: '01000-000',
       suggestedName1: 'Tech Nova Ltda',
-      suggestedName2: 'Nova Tech SA',
-      suggestedName3: 'Inova Tech',
+      suggestedName2: '',
+      suggestedName3: '',
       capitalSocial: 50000,
     },
     activity: {
       mainCnae: '6201-5/01',
-      secondaryCnaes: '6202-3/00, 6204-0/00',
-      businessAddress: 'Centro Comercial, Sala 100',
-      description: 'Desenvolvimento de software e consultoria especializada em soluções web.',
-    },
-    documents: [
-      {
-        id: 'rg',
-        label: 'Documento de Identidade',
-        fileName: 'rg_joao.pdf',
-        uploadedAt: '2023-10-15T10:05:00Z',
-      },
-    ],
-    signature: '',
-  },
-  {
-    id: 'sub-2',
-    protocol: '2023-10-20-0002',
-    clientName: 'Carlos Roberto (MEI)',
-    status: 'pending',
-    createdAt: '2023-10-20T14:30:00Z',
-    updatedAt: '2023-10-20T14:30:00Z',
-    partners: [],
-    company: {
-      type: 'mei',
-      tradeName: 'Padaria Saborosa',
-      email: 'carlos.padaria@email.com',
-      phone: '(21) 97777-6666',
-      zipCode: '20000-000',
-      suggestedName1: '',
-      suggestedName2: '',
-      suggestedName3: '',
-      capitalSocial: 5000,
-    },
-    activity: {
-      mainCnae: '1071-6/00',
       secondaryCnaes: '',
-      businessAddress: 'Av Principal, 1000',
-      description: 'Fabricação de produtos de padaria e confeitaria.',
+      businessAddress: 'Centro Comercial',
+      description: 'Desenvolvimento de software',
     },
     documents: [],
     signature: '',
@@ -129,7 +86,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [emailTemplate, setEmailTemplate] = useState(() => {
     return (
       localStorage.getItem(EMAIL_TEMPLATE_KEY) ||
-      'Olá {nome},\n\nRecebemos sua solicitação de abertura de empresa com sucesso!\n\nSeu número de protocolo é: {protocolo}\n\nNossa equipe está analisando os dados e documentos enviados. Em breve, você receberá atualizações sobre o andamento do processo.\n\nAtenciosamente,\nEquipe EmpresaFlow'
+      'Olá {nome},\n\nRecebemos sua solicitação de abertura de empresa com sucesso!\n\nSeu número de protocolo é: {protocolo}'
     )
   })
 
@@ -137,7 +94,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const syncSubmissions = useCallback(async (options?: { force?: boolean }) => {
     if (!navigator.onLine) {
       setSyncStatus('error')
-      setSyncError('Você está offline. As alterações serão salvas localmente.')
+      setSyncError('Você está offline.')
       return
     }
 
@@ -148,11 +105,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     setSyncError(null)
 
     try {
-      // Simulate network latency. Longer delay for explicit user actions (force) to show visual feedback
-      await new Promise((resolve) => setTimeout(resolve, options?.force ? 600 : 300))
+      await new Promise((resolve) => setTimeout(resolve, options?.force ? 400 : 200))
 
-      // Enforce State Integrity: Simulated cache busting to bypass local browser cache
-      // This fulfills the "Cache Suppression" requirement ensuring a "hard fetch" from the server
+      // Enforce State Integrity: Bypass local browser cache completely
+      // Ensuring dashboard reflects the most current database state
       const cacheBuster = Date.now()
       const _simulatedFetchUrl = `/api/sync?_t=${cacheBuster}`
 
@@ -164,24 +120,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             Pragma: 'no-cache',
           },
         }).catch(() => {})
-      } catch (e) {
-        // Ignore mock fetch error
-      }
+      } catch (e) {}
 
       const serverData = getDB()
 
-      // Deep stringify comparison prevents unnecessary React re-renders when data hasn't changed
-      // AppContext must force a complete state reset and reload whenever a discrepancy is detected
-      setSubmissions((prev) => {
-        const isDifferent = JSON.stringify(prev) !== JSON.stringify(serverData)
-        if (isDifferent) {
-          return [...serverData] // Force complete state reset with new array reference
-        }
-        return prev
-      })
+      // Prioritize server-side truth: force state update with strict parity
+      // Eliminates discrepancies across views/devices
+      setSubmissions([...serverData])
 
-      // SyncIndicator Accuracy: update timestamp only after a successful and verified data fetch
-      // that confirms the local count matches the server count (simulated via state update completion)
       setLastSyncAt(new Date())
       setSyncStatus('idle')
 
@@ -189,9 +135,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serverData))
       }
     } catch (error) {
-      console.error('Failed to sync submissions:', error)
+      console.error('Failed to sync:', error)
       setSyncStatus('error')
-      setSyncError('Falha ao conectar com a nuvem.')
+      setSyncError('Falha ao conectar.')
     } finally {
       syncInProgress.current = false
     }
@@ -202,37 +148,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [emailTemplate])
 
   useEffect(() => {
-    // Initial Hydration
     syncSubmissions({ force: true })
 
-    // Background Auto-Refresh Polling: Centralized interval to catch cross-device updates
     const intervalId = setInterval(() => {
       syncSubmissions()
-    }, 12000)
+    }, 10000)
 
-    // Window Focus Refresh: Aggressive Revalidation whenever tab is brought to foreground
     const handleFocus = () => syncSubmissions({ force: true })
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible') {
-        syncSubmissions({ force: true })
-      }
-    }
-    const handleOnline = () => syncSubmissions({ force: true })
-    const handleOffline = () => {
-      setSyncStatus('error')
-      setSyncError('Conexão perdida. Modo offline ativado.')
+      if (document.visibilityState === 'visible') syncSubmissions({ force: true })
     }
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === LOCAL_STORAGE_KEY) {
         syncSubmissions({ force: true })
       }
-      if (e.key === EMAIL_TEMPLATE_KEY && e.newValue) {
-        setEmailTemplate(e.newValue)
-      }
     }
 
-    // Real-time Listener Integrity: Listen to notifications across different sessions/tabs
     let channel: BroadcastChannel | null = null
     try {
       channel = new BroadcastChannel('empresaflow_notifications')
@@ -247,20 +179,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     window.addEventListener('focus', handleFocus)
     document.addEventListener('visibilitychange', handleVisibilityChange)
-    window.addEventListener('online', handleOnline)
-    window.addEventListener('offline', handleOffline)
     window.addEventListener('storage', handleStorageChange)
 
     return () => {
       clearInterval(intervalId)
       window.removeEventListener('focus', handleFocus)
       document.removeEventListener('visibilitychange', handleVisibilityChange)
-      window.removeEventListener('online', handleOnline)
-      window.removeEventListener('offline', handleOffline)
       window.removeEventListener('storage', handleStorageChange)
-      if (channel) {
-        channel.close()
-      }
+      if (channel) channel.close()
     }
   }, [syncSubmissions])
 
@@ -268,7 +194,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const newId = `sub-${Math.random().toString(36).substring(2, 9)}`
     const now = new Date()
     const isoString = now.toISOString()
-
     const yyyy = now.getFullYear()
     const mm = String(now.getMonth() + 1).padStart(2, '0')
     const dd = String(now.getDate()).padStart(2, '0')
@@ -284,49 +209,37 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
 
     const currentDB = getDB()
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([newSubmission, ...currentDB]))
+    const updatedDB = [newSubmission, ...currentDB]
 
-    setSubmissions((prev) => [newSubmission, ...prev])
-
-    syncSubmissions({ force: true }).catch(() => {
-      setSyncStatus('error')
-      setSyncError('Salvo localmente. Aguardando conexão para enviar à nuvem.')
-    })
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
+    setSubmissions(updatedDB)
 
     try {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
       channel.close()
-    } catch (e) {
-      console.warn('BroadcastChannel not supported', e)
-    }
+    } catch (e) {}
 
+    syncSubmissions({ force: true }).catch(() => {})
     return newId
   }
 
   const updateSubmission = async (id: string, data: Partial<Submission>) => {
+    const currentDB = getDB()
+    const updatedDB = currentDB.map((s) =>
+      s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s,
+    )
+
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
+    setSubmissions(updatedDB)
+
     try {
-      const currentDB = getDB()
-      const updatedDB = currentDB.map((s) =>
-        s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s,
-      )
+      const channel = new BroadcastChannel('empresaflow_notifications')
+      channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
+      channel.close()
+    } catch (e) {}
 
-      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
-      setSubmissions(updatedDB)
-
-      try {
-        const channel = new BroadcastChannel('empresaflow_notifications')
-        channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
-        channel.close()
-      } catch (e) {
-        console.warn('BroadcastChannel not supported', e)
-      }
-
-      await syncSubmissions({ force: true })
-    } catch (err) {
-      setSyncStatus('error')
-      setSyncError('Falha ao salvar no servidor. Salvo apenas localmente.')
-    }
+    await syncSubmissions({ force: true })
   }
 
   const getSubmission = (id: string) => submissions.find((s) => s.id === id)

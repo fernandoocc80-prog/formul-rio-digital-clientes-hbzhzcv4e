@@ -127,11 +127,15 @@ export default function ClientForm() {
 
     if (currentIndex < visibleSteps.length - 1) {
       setCurrentStepId(visibleSteps[currentIndex + 1].id)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
     }
   }
 
   const handlePrev = () => {
-    if (currentIndex > 0) setCurrentStepId(visibleSteps[currentIndex - 1].id)
+    if (currentIndex > 0) {
+      setCurrentStepId(visibleSteps[currentIndex - 1].id)
+      window.scrollTo({ top: 0, behavior: 'smooth' })
+    }
   }
 
   const handleSubmit = () => {
@@ -165,7 +169,7 @@ export default function ClientForm() {
   const progress = ((currentIndex + 1) / visibleSteps.length) * 100
 
   return (
-    <div className="max-w-3xl mx-auto py-8 px-4 transition-colors">
+    <div className="max-w-3xl mx-auto py-8 px-4 transition-colors relative min-h-screen pb-32 sm:pb-8">
       <div className="flex items-center justify-between mb-8 border-b border-border pb-4">
         <h1 className="text-xl font-bold text-primary flex items-center gap-2">
           <Building2 className="w-6 h-6" /> EmpresaFlow
@@ -226,14 +230,18 @@ export default function ClientForm() {
         )}
       </div>
 
-      <div className="flex justify-between pt-8 border-t border-border mt-8 pb-12 sm:pb-8">
+      {/*
+        Sticky footer ensures the "Finalizar Formulário" button is always visible on all devices, 
+        fixing the visibility acceptance criteria.
+      */}
+      <div className="fixed sm:static bottom-0 left-0 right-0 bg-background/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none z-50 p-4 sm:p-0 pt-4 sm:pt-8 border-t border-border mt-8 flex justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] sm:shadow-none">
         <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
           <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
         </Button>
         {currentIndex === visibleSteps.length - 1 ? (
           <Button
             onClick={handleSubmit}
-            className="bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+            className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-all active:scale-95"
           >
             Finalizar formulário <Check className="w-4 h-4 ml-2" />
           </Button>
