@@ -94,16 +94,59 @@ const fetchFromServerMock = async (): Promise<Submission[]> => {
 }
 
 const getUsersDB = (): AdminUser[] => {
+  let users: AdminUser[] = []
   try {
     const saved = localStorage.getItem(USERS_STORAGE_KEY)
     if (saved) {
       const parsed = JSON.parse(saved)
-      return parsed.map((u: any) => ({ ...u, role: u.role || 'admin' }))
+      if (Array.isArray(parsed)) {
+        users = parsed.map((u: any) => ({ ...u, role: u.role || 'admin' }))
+      }
     }
   } catch (e) {
     /* ignore */
   }
-  return []
+
+  let modified = false
+  const SEED_USERS: AdminUser[] = [
+    {
+      id: 'usr-admin-seed',
+      name: 'Administrador EmpresaFlow',
+      email: 'admin@empresaflow.com.br',
+      passwordHash: '123456',
+      role: 'admin',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'usr-fernando',
+      name: 'Fernando Castro',
+      email: 'fernando@organizacaocastro.com.br',
+      passwordHash: '123456',
+      role: 'admin',
+      createdAt: new Date().toISOString(),
+    },
+    {
+      id: 'usr-carla',
+      name: 'Carla Castro',
+      email: 'carla@organizacaocastro.com.br',
+      passwordHash: '123456',
+      role: 'colaborador',
+      createdAt: new Date().toISOString(),
+    },
+  ]
+
+  SEED_USERS.forEach((seedUser) => {
+    if (!users.some((u) => u.email.toLowerCase() === seedUser.email.toLowerCase())) {
+      users.push(seedUser)
+      modified = true
+    }
+  })
+
+  if (modified) {
+    localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(users))
+  }
+
+  return users
 }
 
 const getCurrentUserDB = (): AdminUser | null => {

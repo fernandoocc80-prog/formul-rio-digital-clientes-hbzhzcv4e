@@ -41,6 +41,7 @@ export default function Login() {
 
     try {
       // Data Integrity & Multi-Admin Support: Login properly verifies unique credentials
+      // Device/browser logic happens seamlessly inside the login method without blocking
       const user = await login(normalizedEmail, password)
 
       if (user) {
@@ -70,7 +71,17 @@ export default function Login() {
 
   const handleQuickFill = (testEmail: string) => {
     setEmail(testEmail)
-    document.getElementById('password')?.focus()
+    const knownTestAccounts = [
+      'admin@empresaflow.com.br',
+      'fernando@organizacaocastro.com.br',
+      'carla@organizacaocastro.com.br',
+    ]
+    if (knownTestAccounts.includes(testEmail)) {
+      setPassword('123456')
+    } else {
+      setPassword('')
+      setTimeout(() => document.getElementById('password')?.focus(), 10)
+    }
   }
 
   return (
@@ -166,7 +177,8 @@ export default function Login() {
                 )}
               </div>
               <p className="mt-3 text-[10px] text-slate-500">
-                Selecione uma conta acima e insira a respectiva senha cadastrada.
+                Selecione uma conta acima para testar. As contas de teste usam a senha{' '}
+                <strong>123456</strong>.
               </p>
             </div>
           )}
