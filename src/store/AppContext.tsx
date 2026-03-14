@@ -293,7 +293,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
       channel.close()
-    } catch (e) {}
+    } catch (e) {
+      // Ignored if BroadcastChannel is not supported by environment
+    }
 
     if (currentUser) {
       syncSubmissions({ force: true, background: true }).catch(() => {})
@@ -314,7 +316,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
       channel.close()
-    } catch (e) {}
+    } catch (e) {
+      // Ignored if BroadcastChannel is not supported by environment
+    }
 
     if (currentUser) {
       await syncSubmissions({ force: true, background: true })
@@ -333,7 +337,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const channel = new BroadcastChannel('empresaflow_notifications')
           channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
           channel.close()
-        } catch (e) {}
+        } catch (e) {
+          // Ignored if BroadcastChannel is not supported by environment
+        }
         return true
       }
       return false
@@ -348,7 +354,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
       channel.close()
-    } catch (e) {}
+    } catch (e) {
+      // Ignored if BroadcastChannel is not supported by environment
+    }
   }, [])
 
   const registerUser = useCallback(
@@ -367,7 +375,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'USERS_STATE_CHANGE' })
         channel.close()
-      } catch (e) {}
+      } catch (e) {
+        // Ignored if BroadcastChannel is not supported by environment
+      }
     },
     [users],
   )
@@ -381,7 +391,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'USERS_STATE_CHANGE' })
         channel.close()
-      } catch (e) {}
+      } catch (e) {
+        // Ignored if BroadcastChannel is not supported by environment
+      }
     },
     [users],
   )
