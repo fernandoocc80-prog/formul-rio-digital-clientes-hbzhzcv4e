@@ -1,11 +1,16 @@
 import { useEffect, useCallback } from 'react'
-import { Outlet } from 'react-router-dom'
+import { Outlet, useNavigate } from 'react-router-dom'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AdminSidebar } from './layout/AdminSidebar'
 import { useToast } from '@/hooks/use-toast'
+import { useAppStore } from '@/store/AppContext'
+import { Button } from '@/components/ui/button'
+import { LogOut } from 'lucide-react'
 
 export default function AdminLayout() {
   const { toast } = useToast()
+  const { currentUser, logout } = useAppStore()
+  const navigate = useNavigate()
 
   const playAlertSound = useCallback(() => {
     try {
@@ -56,16 +61,43 @@ export default function AdminLayout() {
     }
   }, [toast, playAlertSound])
 
+  const handleLogout = () => {
+    logout()
+    navigate('/login')
+    toast({
+      title: 'Sessão encerrada',
+      description: 'Você saiu com sucesso.',
+    })
+  }
+
   return (
     <SidebarProvider>
-      <div className="flex min-h-[calc(100vh-4rem)] w-full">
+      <div className="flex min-h-screen w-full">
         <AdminSidebar />
         <div className="flex-1 w-full overflow-hidden flex flex-col">
-          <div className="p-4 border-b bg-white no-print flex items-center gap-4">
-            <SidebarTrigger />
-            <h2 className="font-semibold text-sm text-muted-foreground">Painel de Controle</h2>
+          <div className="p-4 border-b bg-white no-print flex items-center justify-between gap-4">
+            <div className="flex items-center gap-4">
+              <SidebarTrigger />
+              <h2 className="font-semibold text-sm text-muted-foreground hidden sm:block">
+                Painel de Controle
+              </h2>
+            </div>
+            <div className="flex items-center gap-3">
+              <div className="text-sm font-medium hidden sm:block pr-3 border-r text-slate-700">
+                {currentUser?.name || 'Administrador'}
+              </div>
+              <Button
+                variant="ghost"
+                size="sm"
+                onClick={handleLogout}
+                className="text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors"
+              >
+                <LogOut className="h-4 w-4 sm:mr-2" />
+                <span className="hidden sm:inline">Sair</span>
+              </Button>
+            </div>
           </div>
-          <main className="flex-1 p-6 overflow-auto bg-background animate-fade-in">
+          <main className="flex-1 p-6 overflow-auto bg-slate-50/50 animate-fade-in">
             <Outlet />
           </main>
         </div>

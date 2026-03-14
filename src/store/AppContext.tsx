@@ -7,7 +7,7 @@ import React, {
   useCallback,
   useRef,
 } from 'react'
-import { Submission } from '@/types'
+import { Submission, AdminUser } from '@/types'
 
 interface AppState {
   submissions: Submission[]
@@ -15,11 +15,17 @@ interface AppState {
   syncStatus: 'idle' | 'syncing' | 'error'
   syncError: string | null
   lastSyncAt: Date | null
+  users: AdminUser[]
+  currentUser: AdminUser | null
   addSubmission: (sub: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => string
   updateSubmission: (id: string, data: Partial<Submission>) => Promise<void>
   getSubmission: (id: string) => Submission | undefined
   updateEmailTemplate: (template: string) => void
   syncSubmissions: (options?: { force?: boolean }) => Promise<void>
+  login: (email: string, passwordHash: string) => boolean
+  logout: () => void
+  registerUser: (name: string, email: string, passwordHash: string) => void
+  removeUser: (id: string) => void
 }
 
 const mockData: Submission[] = [
@@ -62,9 +68,21 @@ const mockData: Submission[] = [
   },
 ]
 
+const mockUsers: AdminUser[] = [
+  {
+    id: 'usr-admin-01',
+    name: 'Administrador Principal',
+    email: 'admin@empresaflow.com.br',
+    passwordHash: 'admin123',
+    createdAt: new Date().toISOString(),
+  },
+]
+
 const AppContext = createContext<AppState | undefined>(undefined)
 const LOCAL_STORAGE_KEY = 'empresaflow_submissions_v1'
 const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
+const USERS_STORAGE_KEY = 'empresaflow_users_v1'
+const CURRENT_USER_KEY = 'empresaflow_current_user_v1'
 
 const getDB = (): Submission[] => {
   try {
@@ -76,12 +94,35 @@ const getDB = (): Submission[] => {
   return mockData
 }
 
+const getUsersDB = (): AdminUser[] => {
+  try {
+    const saved = localStorage.getItem(USERS_STORAGE_KEY)
+    if (saved) return JSON.parse(saved)
+  } catch (e) {
+    console.warn('Could not parse users local storage', e)
+  }
+  return mockUsers
+}
+
+const getCurrentUserDB = (): AdminUser | null => {
+  try {
+    const saved = localStorage.getItem(CURRENT_USER_KEY)
+    if (saved) return JSON.parse(saved)
+  } catch (e) {
+    console.warn('Could not parse current user local storage', e)
+  }
+  return null
+}
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [submissions, setSubmissions] = useState<Submission[]>(getDB)
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle')
   const [syncError, setSyncError] = useState<string | null>(null)
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
   const syncInProgress = useRef(false)
+
+  const [users, setUsers] = useState<AdminUser[]>(getUsersDB)
+  const [currentUser, setCurrentUser] = useState<AdminUser | null>(getCurrentUserDB)
 
   const [emailTemplate, setEmailTemplate] = useState(() => {
     return (
@@ -107,8 +148,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       await new Promise((resolve) => setTimeout(resolve, options?.force ? 400 : 200))
 
-      // Enforce State Integrity: Bypass local browser cache completely
-      // Ensuring dashboard reflects the most current database state
       const cacheBuster = new Date().getTime().toString()
       const _simulatedFetchUrl = `/api/sync?_t=${cacheBuster}`
 
@@ -121,17 +160,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             Pragma: 'no-cache',
             Expires: '0',
           },
-        }).catch(() => {
-          // ignore error since it's a simulated endpoint
-        })
-      } catch (e) {
-        // ignore error
-      }
+        }).catch(() => {})
+      } catch (e) {}
 
       const serverData = getDB()
 
-      // Integrity Validation: background check comparing local state count with server's record.
-      // If a discrepancy is detected (count mismatch or state difference), force an immediate update to match the server.
       setSubmissions((prev) => {
         const isCountDifferent = prev.length !== serverData.length
         const isDataDifferent = prev.some(
@@ -167,15 +200,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [emailTemplate])
 
   useEffect(() => {
-    // Initial sync
     syncSubmissions({ force: true })
 
-    // Frequent background polling for cross-device consistency (acting as global state reconciliation)
     const intervalId = setInterval(() => {
       syncSubmissions()
-    }, 5000) // Increased frequency to 5s for near real-time updates without WebSockets
+    }, 5000)
 
-    // Automatic state revalidation on window/tab focus
     const handleFocus = () => syncSubmissions({ force: true })
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') syncSubmissions({ force: true })
@@ -195,9 +225,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           syncSubmissions({ force: true })
         }
       }
-    } catch (e) {
-      console.warn('BroadcastChannel not supported', e)
-    }
+    } catch (e) {}
 
     window.addEventListener('focus', handleFocus)
     document.addEventListener('visibilitychange', handleVisibilityChange)
@@ -235,18 +263,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
 
-    // Broadcast immediately so other instances get the new count right away
     try {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
       channel.close()
-    } catch (e) {
-      // ignore error
-    }
+    } catch (e) {}
 
-    syncSubmissions({ force: true }).catch(() => {
-      // ignore error
-    })
+    syncSubmissions({ force: true }).catch(() => {})
     return newId
   }
 
@@ -262,9 +285,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
       channel.close()
-    } catch (e) {
-      // ignore error
-    }
+    } catch (e) {}
 
     await syncSubmissions({ force: true })
   }
@@ -272,6 +293,49 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const getSubmission = (id: string) => submissions.find((s) => s.id === id)
 
   const updateEmailTemplate = (template: string) => setEmailTemplate(template)
+
+  const login = useCallback(
+    (email: string, passwordHash: string) => {
+      const user = users.find((u) => u.email === email && u.passwordHash === passwordHash)
+      if (user) {
+        setCurrentUser(user)
+        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user))
+        return true
+      }
+      return false
+    },
+    [users],
+  )
+
+  const logout = useCallback(() => {
+    setCurrentUser(null)
+    localStorage.removeItem(CURRENT_USER_KEY)
+  }, [])
+
+  const registerUser = useCallback(
+    (name: string, email: string, passwordHash: string) => {
+      const newUser: AdminUser = {
+        id: `usr-${Math.random().toString(36).substring(2, 9)}`,
+        name,
+        email,
+        passwordHash,
+        createdAt: new Date().toISOString(),
+      }
+      const updatedUsers = [...users, newUser]
+      setUsers(updatedUsers)
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers))
+    },
+    [users],
+  )
+
+  const removeUser = useCallback(
+    (id: string) => {
+      const updatedUsers = users.filter((u) => u.id !== id)
+      setUsers(updatedUsers)
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers))
+    },
+    [users],
+  )
 
   return (
     <AppContext.Provider
@@ -281,11 +345,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         syncStatus,
         syncError,
         lastSyncAt,
+        users,
+        currentUser,
         addSubmission,
         updateSubmission,
         getSubmission,
         updateEmailTemplate,
         syncSubmissions,
+        login,
+        logout,
+        registerUser,
+        removeUser,
       }}
     >
       {children}

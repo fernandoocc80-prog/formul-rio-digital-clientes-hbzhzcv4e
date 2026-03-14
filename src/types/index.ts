@@ -51,3 +51,11 @@ export interface Submission {
 }
 
 export type PartialSubmission = Partial<Submission>
+
+export interface AdminUser {
+  id: string
+  name: string
+  email: string
+  passwordHash: string
+  createdAt: string
+}

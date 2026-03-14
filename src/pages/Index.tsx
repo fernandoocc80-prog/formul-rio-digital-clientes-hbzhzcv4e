@@ -11,7 +11,7 @@ import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
 
 export default function Index() {
   const navigate = useNavigate()
-  const { submissions, syncSubmissions } = useAppStore()
+  const { submissions, syncSubmissions, currentUser } = useAppStore()
 
   // Real-Time Data Revalidation: ensure data is always the most recent version on mount
   useEffect(() => {
@@ -23,11 +23,13 @@ export default function Index() {
   }
 
   return (
-    <div className="container py-8 max-w-6xl space-y-8">
+    <div className="container py-2 max-w-6xl space-y-8">
       <section className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
-            <h1 className="text-3xl font-bold tracking-tight">Bem-vindo, Contador</h1>
+            <h1 className="text-3xl font-bold tracking-tight">
+              Bem-vindo, {currentUser?.name?.split(' ')[0] || 'Contador'}
+            </h1>
             <SyncIndicator />
           </div>
           <p className="text-muted-foreground mt-1">
@@ -40,7 +42,7 @@ export default function Index() {
           </div>
           <Button
             onClick={handleCreateForm}
-            className="shadow-elevation hover:scale-[1.02] transition-transform"
+            className="shadow-elevation hover:scale-[1.02] transition-transform bg-blue-600 hover:bg-blue-700 text-white"
           >
             <PlusCircle className="mr-2 h-4 w-4" />
             Novo Formulário
@@ -99,7 +101,7 @@ export default function Index() {
               {submissions.slice(0, 5).map((sub) => (
                 <div
                   key={sub.id}
-                  className="flex items-center justify-between p-3 border rounded-lg bg-slate-50/50"
+                  className="flex items-center justify-between p-3 border rounded-lg bg-slate-50/50 hover:bg-slate-50 transition-colors"
                 >
                   <div>
                     <p className="font-medium">{sub.clientName || 'Cliente sem nome'}</p>
@@ -114,6 +116,11 @@ export default function Index() {
                   </Link>
                 </div>
               ))}
+              {submissions.length === 0 && (
+                <div className="text-center py-8 text-muted-foreground">
+                  Nenhuma solicitação recebida ainda.
+                </div>
+              )}
             </div>
           </CardContent>
         </Card>
