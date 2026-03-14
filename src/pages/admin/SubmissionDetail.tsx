@@ -115,7 +115,7 @@ export default function SubmissionDetail() {
                     : '-'}
                 </p>
               </div>
-              {submission.company?.type === 'ltda' && (
+              {(submission.company?.type === 'ltda' || submission.company?.type === 'slu') && (
                 <div className="col-span-2 mt-2">
                   <p className="text-sm text-muted-foreground font-medium mb-1">
                     Opções de Razão Social

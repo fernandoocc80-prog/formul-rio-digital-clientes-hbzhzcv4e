@@ -1,5 +1,5 @@
 export type SubmissionStatus = 'draft' | 'pending' | 'under_review' | 'approved'
-export type CompanyType = 'mei' | 'ltda'
+export type CompanyType = 'mei' | 'ltda' | 'slu'
 
 export interface Partner {
   id: string

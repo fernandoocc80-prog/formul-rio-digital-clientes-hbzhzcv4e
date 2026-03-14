@@ -190,7 +190,6 @@ export default function SubmissionsList() {
         </div>
       </div>
 
-      {/* Filtros Container */}
       <div className="bg-white border rounded-lg p-4 flex flex-wrap items-center gap-3 w-full shadow-sm">
         <span className="text-sm font-medium text-slate-700 w-full sm:w-auto mr-1">Filtros:</span>
         <Popover>
@@ -239,6 +238,7 @@ export default function SubmissionsList() {
             <SelectItem value="all">Todos Tipos</SelectItem>
             <SelectItem value="mei">MEI</SelectItem>
             <SelectItem value="ltda">LTDA</SelectItem>
+            <SelectItem value="slu">SLU</SelectItem>
           </SelectContent>
         </Select>
 

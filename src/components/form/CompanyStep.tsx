@@ -42,6 +42,12 @@ export function CompanyStep({ data, onChange }: Props) {
                   LTDA
                 </Label>
               </div>
+              <div className="flex items-center space-x-2">
+                <RadioGroupItem value="slu" id="slu" />
+                <Label htmlFor="slu" className="cursor-pointer">
+                  SLU
+                </Label>
+              </div>
             </RadioGroup>
           </div>
 
@@ -96,11 +102,9 @@ export function CompanyStep({ data, onChange }: Props) {
             </div>
           </div>
 
-          {data.type === 'ltda' && (
+          {(data.type === 'ltda' || data.type === 'slu') && (
             <div className="pt-6 border-t space-y-4">
-              <Label className="text-base font-semibold">
-                Opções de Razão Social (Apenas LTDA)
-              </Label>
+              <Label className="text-base font-semibold">Opções de Razão Social (LTDA / SLU)</Label>
               <p className="text-sm text-muted-foreground mt-0">
                 Sugerimos 3 opções, pois o nome escolhido pode já estar em uso.
               </p>

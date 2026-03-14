@@ -106,7 +106,7 @@ export default function ClientForm() {
         })
         return
       }
-      if (company.type === 'ltda' && !company.suggestedName1) {
+      if ((company.type === 'ltda' || company.type === 'slu') && !company.suggestedName1) {
         toast({
           title: 'Campo Obrigatório',
           description: 'Preencha ao menos a 1ª opção de razão social.',
@@ -230,10 +230,6 @@ export default function ClientForm() {
         )}
       </div>
 
-      {/*
-        Sticky footer ensures the "Finalizar Formulário" button is always visible on all devices, 
-        fixing the visibility acceptance criteria.
-      */}
       <div className="fixed sm:static bottom-0 left-0 right-0 bg-background/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none z-50 p-4 sm:p-0 pt-4 sm:pt-8 border-t border-border mt-8 flex justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] sm:shadow-none">
         <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
           <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
