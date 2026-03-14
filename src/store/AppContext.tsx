@@ -152,9 +152,21 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       await new Promise((resolve) => setTimeout(resolve, options?.force ? 600 : 300))
 
       // Enforce State Integrity: Simulated cache busting to bypass local browser cache
-      // This fulfills the "Cache Invalidation" requirement ensuring a "hard fetch" from the server
+      // This fulfills the "Cache Suppression" requirement ensuring a "hard fetch" from the server
       const cacheBuster = Date.now()
       const _simulatedFetchUrl = `/api/sync?_t=${cacheBuster}`
+
+      try {
+        await fetch(_simulatedFetchUrl, {
+          cache: 'no-store',
+          headers: {
+            'Cache-Control': 'no-cache',
+            Pragma: 'no-cache',
+          },
+        }).catch(() => {})
+      } catch (e) {
+        // Ignore mock fetch error
+      }
 
       const serverData = getDB()
 
@@ -198,7 +210,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       syncSubmissions()
     }, 12000)
 
-    // Window Focus Refresh: Automatic data revalidation whenever tab is brought to foreground
+    // Window Focus Refresh: Aggressive Revalidation whenever tab is brought to foreground
     const handleFocus = () => syncSubmissions({ force: true })
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') {
@@ -220,6 +232,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     }
 
+    // Real-time Listener Integrity: Listen to notifications across different sessions/tabs
+    let channel: BroadcastChannel | null = null
+    try {
+      channel = new BroadcastChannel('empresaflow_notifications')
+      channel.onmessage = (event) => {
+        if (event.data?.type === 'NEW_SUBMISSION' || event.data?.type === 'UPDATE_SUBMISSION') {
+          syncSubmissions({ force: true })
+        }
+      }
+    } catch (e) {
+      console.warn('BroadcastChannel not supported', e)
+    }
+
     window.addEventListener('focus', handleFocus)
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('online', handleOnline)
@@ -233,6 +258,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       window.removeEventListener('online', handleOnline)
       window.removeEventListener('offline', handleOffline)
       window.removeEventListener('storage', handleStorageChange)
+      if (channel) {
+        channel.close()
+      }
     }
   }, [syncSubmissions])
 

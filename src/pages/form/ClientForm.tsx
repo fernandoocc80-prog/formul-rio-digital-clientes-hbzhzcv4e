@@ -79,7 +79,7 @@ export default function ClientForm() {
         setSignature(existing.signature || '')
       }
     }
-  }, [id])
+  }, [id, getSubmission])
 
   const visibleSteps = useMemo(() => {
     return [
@@ -99,18 +99,20 @@ export default function ClientForm() {
   const handleNext = () => {
     if (activeStepId === 'company') {
       if (!company.tradeName || !company.email) {
-        return toast({
+        toast({
           title: 'Campos Obrigatórios',
           description: 'Nome Fantasia e E-mail corporativo são obrigatórios.',
           variant: 'destructive',
         })
+        return
       }
       if (company.type === 'ltda' && !company.suggestedName1) {
-        return toast({
+        toast({
           title: 'Campo Obrigatório',
           description: 'Preencha ao menos a 1ª opção de razão social.',
           variant: 'destructive',
         })
+        return
       }
     }
 
@@ -118,7 +120,9 @@ export default function ClientForm() {
       toast({
         title: 'Assinatura pendente',
         description: 'Por favor, assine o formulário antes de revisar e enviar.',
+        variant: 'destructive',
       })
+      return
     }
 
     if (currentIndex < visibleSteps.length - 1) {
@@ -215,20 +219,23 @@ export default function ClientForm() {
             </div>
             <h2 className="text-2xl font-bold">Tudo Certo!</h2>
             <p className="text-muted-foreground max-w-md mx-auto">
-              Revisamos os dados preenchidos e documentos anexados. Clique em "Finalizar" para
-              enviar a solicitação para nossa equipe.
+              Revisamos os dados preenchidos e documentos anexados. Clique em "Finalizar formulário"
+              para enviar a solicitação para nossa equipe.
             </p>
           </div>
         )}
       </div>
 
-      <div className="flex justify-between pt-8 border-t border-border mt-8">
+      <div className="flex justify-between pt-8 border-t border-border mt-8 pb-12 sm:pb-8">
         <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
           <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
         </Button>
         {currentIndex === visibleSteps.length - 1 ? (
-          <Button onClick={handleSubmit} className="bg-success hover:bg-success/90">
-            Finalizar Envio <Check className="w-4 h-4 ml-2" />
+          <Button
+            onClick={handleSubmit}
+            className="bg-blue-600 hover:bg-blue-700 text-white shadow-md"
+          >
+            Finalizar formulário <Check className="w-4 h-4 ml-2" />
           </Button>
         ) : (
           <Button onClick={handleNext}>
