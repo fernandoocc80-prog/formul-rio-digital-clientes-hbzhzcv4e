@@ -71,7 +71,9 @@ const getRemoteDB = (): Submission[] => {
   try {
     const saved = localStorage.getItem(MOCK_REMOTE_DB_KEY)
     if (saved) return JSON.parse(saved)
-  } catch (e) {}
+  } catch (e) {
+    /* ignore */
+  }
   localStorage.setItem(MOCK_REMOTE_DB_KEY, JSON.stringify(mockData))
   return mockData
 }
@@ -82,7 +84,9 @@ const saveRemoteDB = (data: Submission[]) => {
     const channel = new BroadcastChannel('empresaflow_notifications')
     channel.postMessage({ type: 'DB_UPDATED' })
     channel.close()
-  } catch (e) {}
+  } catch (e) {
+    /* ignore */
+  }
 }
 
 const fetchFromServerMock = async (): Promise<Submission[]> => {
@@ -96,7 +100,9 @@ const getUsersDB = (): AdminUser[] => {
       const parsed = JSON.parse(saved)
       return parsed.map((u: any) => ({ ...u, role: u.role || 'admin' }))
     }
-  } catch (e) {}
+  } catch (e) {
+    /* ignore */
+  }
   return []
 }
 
@@ -107,7 +113,9 @@ const getCurrentUserDB = (): AdminUser | null => {
       const parsed = JSON.parse(saved)
       return { ...parsed, role: parsed.role || 'admin' }
     }
-  } catch (e) {}
+  } catch (e) {
+    /* ignore */
+  }
   return null
 }
 
@@ -115,7 +123,9 @@ const getAccessLogsDB = (): AccessLog[] => {
   try {
     const saved = localStorage.getItem(ACCESS_LOGS_KEY)
     if (saved) return JSON.parse(saved)
-  } catch (e) {}
+  } catch (e) {
+    /* ignore */
+  }
   return []
 }
 
@@ -148,7 +158,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           localStorage.removeItem(k)
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      /* ignore */
+    }
   }, [])
 
   const syncSubmissions = useCallback(
@@ -224,7 +236,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
         channel.close()
-      } catch (e) {}
+      } catch (e) {
+        /* ignore */
+      }
 
       syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
       return newId
@@ -245,7 +259,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
         channel.close()
-      } catch (e) {}
+      } catch (e) {
+        /* ignore */
+      }
 
       await syncSubmissions({ force: true, background: true, skipCache: true })
     },
@@ -298,7 +314,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const channel = new BroadcastChannel('empresaflow_notifications')
           channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
           channel.close()
-        } catch (e) {}
+        } catch (e) {
+          /* ignore */
+        }
 
         await syncSubmissions({ force: true, background: false, skipCache: true })
         return user
@@ -318,7 +336,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
       channel.close()
-    } catch (e) {}
+    } catch (e) {
+      /* ignore */
+    }
   }, [clearCache])
 
   const registerUser = useCallback(
@@ -343,7 +363,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'USERS_STATE_CHANGE' })
         channel.close()
-      } catch (e) {}
+      } catch (e) {
+        /* ignore */
+      }
     },
     [users],
   )
@@ -357,7 +379,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'USERS_STATE_CHANGE' })
         channel.close()
-      } catch (e) {}
+      } catch (e) {
+        /* ignore */
+      }
     },
     [users],
   )
@@ -385,7 +409,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setUsers(getUsersDB())
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      /* ignore */
+    }
 
     window.addEventListener('storage', handleStorageChange)
     return () => {
