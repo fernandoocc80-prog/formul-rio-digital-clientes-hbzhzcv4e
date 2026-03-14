@@ -1,5 +1,5 @@
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { PlusCircle, Link as LinkIcon, Eye, Sparkles } from 'lucide-react'
+import { PlusCircle, Link as LinkIcon, Eye, Sparkles, Copy } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -30,10 +30,13 @@ export default function ColaboradorHome() {
   }
 
   const handleCopyLink = () => {
-    navigator.clipboard.writeText(PUBLIC_URL).then(() => {
+    const message = `Olá! Para darmos andamento na abertura da sua empresa, por favor preencha o formulário no link a seguir: ${PUBLIC_URL}`
+
+    navigator.clipboard.writeText(message).then(() => {
       toast({
-        title: 'Link copiado com sucesso!',
-        description: 'O link do formulário foi copiado para a área de transferência.',
+        title: 'Mensagem copiada com sucesso!',
+        description:
+          'A mensagem contendo o link foi copiada e está pronta para ser enviada ao cliente.',
       })
     })
   }
@@ -98,7 +101,8 @@ export default function ColaboradorHome() {
                 </div>
                 <CardTitle>Link para Cliente</CardTitle>
                 <CardDescription>
-                  Gere um link público para que o cliente preencha os dados de forma independente.
+                  Gere um link público com mensagem para que o cliente preencha os dados de forma
+                  independente.
                 </CardDescription>
               </CardHeader>
               <CardContent className="w-full mt-auto pt-4 space-y-4">
@@ -108,7 +112,8 @@ export default function ColaboradorHome() {
                   className="text-center bg-muted/50 font-mono text-sm"
                 />
                 <Button size="lg" variant="outline" onClick={handleCopyLink} className="w-full">
-                  Gerar Link para Cliente
+                  <Copy className="w-4 h-4 mr-2" />
+                  Copiar Mensagem com Link
                 </Button>
               </CardContent>
             </Card>
