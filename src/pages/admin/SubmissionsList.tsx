@@ -58,11 +58,13 @@ export default function SubmissionsList() {
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
 
-  // Feature: Unified List Querying - Ensure filters are reset on mount to guarantee data parity
+  // Feature: Unified List Querying & Real-time Reflection
+  // Fetch fresh data and reset filters to guarantee UI Integrity
   useEffect(() => {
     setStatusFilter('all')
     setTypeFilter('all')
-  }, [])
+    syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
+  }, [syncSubmissions])
 
   const filtered = submissions.filter((s) => {
     if (statusFilter !== 'all' && s.status !== statusFilter) return false

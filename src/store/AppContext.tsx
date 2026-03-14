@@ -9,16 +9,21 @@ import React, {
 } from 'react'
 import { Submission, AdminUser } from '@/types'
 
-const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v2'
-const LOCAL_CACHE_KEY = 'empresaflow_submissions_cache_v2'
+// Version bumped to v3 to enforce Database Hard Reset across all devices
+const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v3'
+const LOCAL_CACHE_KEY = 'empresaflow_submissions_cache_v3'
 const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
 const USERS_STORAGE_KEY = 'empresaflow_users_v1'
 const CURRENT_USER_KEY = 'empresaflow_current_user_v1'
 
-// Explicit Cache Invalidation: clear local/session storage during initialization
-// This ensures the "Source of Truth" always comes from the server on fresh loads
+// Explicit Cache Invalidation: clear old versions and local/session storage during initialization
+// This ensures the "Source of Truth" purges all old disjointed records on fresh loads
 if (typeof window !== 'undefined') {
   try {
+    localStorage.removeItem('empresaflow_remote_db_v1')
+    localStorage.removeItem('empresaflow_submissions_cache_v1')
+    localStorage.removeItem('empresaflow_remote_db_v2')
+    localStorage.removeItem('empresaflow_submissions_cache_v2')
     localStorage.removeItem(LOCAL_CACHE_KEY)
     sessionStorage.removeItem(LOCAL_CACHE_KEY)
   } catch (e) {
@@ -50,161 +55,41 @@ interface AppState {
   clearCache: () => void
 }
 
+// Sample Data Seeding: A single baseline Model submission
 const mockData: Submission[] = [
   {
-    id: 'sub-1',
-    protocol: '2023-10-15-0001',
-    clientName: 'Tech Nova Solutions',
+    id: 'sub-model-1',
+    protocol: '2023-11-01-0001',
+    clientName: 'Cliente Modelo',
     status: 'approved',
-    createdAt: '2023-10-15T10:00:00Z',
-    updatedAt: '2023-10-16T10:00:00Z',
+    createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString(),
     partners: [
       {
-        id: 'p1',
-        name: 'João Souza',
+        id: 'p-model-1',
+        name: 'Sócio Modelo',
         cpf: '111.222.333-44',
-        rg: '12.345.678-9',
-        address: 'Rua A, 123',
-        sharePercentage: 60,
-      },
-    ],
-    company: {
-      type: 'ltda',
-      tradeName: 'Tech Nova',
-      email: 'contato@technova.com.br',
-      phone: '(11) 98888-7777',
-      zipCode: '01000-000',
-      suggestedName1: 'Tech Nova Ltda',
-      suggestedName2: '',
-      suggestedName3: '',
-      capitalSocial: 50000,
-    },
-    activity: {
-      mainCnae: '6201-5/01',
-      secondaryCnaes: '',
-      businessAddress: 'Centro Comercial',
-      description: 'Desenvolvimento de software',
-    },
-    documents: [],
-    signature: '',
-  },
-  {
-    id: 'sub-2',
-    protocol: '2023-10-16-0002',
-    clientName: 'Maria Silva MEI',
-    status: 'pending',
-    createdAt: '2023-10-16T14:20:00Z',
-    updatedAt: '2023-10-16T14:20:00Z',
-    partners: [],
-    company: {
-      type: 'mei',
-      tradeName: 'Maria Doces',
-      email: 'maria@doces.com.br',
-      phone: '(11) 97777-6666',
-      zipCode: '02000-000',
-      suggestedName1: 'Maria Silva Doces MEI',
-      suggestedName2: '',
-      suggestedName3: '',
-      capitalSocial: 5000,
-    },
-    activity: {
-      mainCnae: '1099-6/99',
-      secondaryCnaes: '',
-      businessAddress: 'Rua das Flores, 45',
-      description: 'Fabricação de doces e salgados',
-    },
-    documents: [],
-    signature: '',
-  },
-  {
-    id: 'sub-3',
-    protocol: '2023-10-17-0003',
-    clientName: 'Pedro Santos',
-    status: 'under_review',
-    createdAt: '2023-10-17T09:15:00Z',
-    updatedAt: '2023-10-18T10:30:00Z',
-    partners: [
-      {
-        id: 'p2',
-        name: 'Pedro Santos',
-        cpf: '222.333.444-55',
-        rg: '22.333.444-5',
-        address: 'Av Brasil, 1500',
+        rg: '11.222.333-4',
+        address: 'Rua Exemplo, 123',
         sharePercentage: 100,
       },
     ],
     company: {
       type: 'ltda',
-      tradeName: 'Santos Logística',
-      email: 'pedro@santoslog.com.br',
-      phone: '(21) 98888-5555',
-      zipCode: '20000-000',
-      suggestedName1: 'Santos Logística e Transportes Ltda',
-      suggestedName2: 'Pedro Santos Logística Ltda',
+      tradeName: 'Empresa Modelo',
+      email: 'contato@empresamodelo.com.br',
+      phone: '(11) 98888-7777',
+      zipCode: '01000-000',
+      suggestedName1: 'Empresa Modelo Ltda',
+      suggestedName2: '',
       suggestedName3: '',
       capitalSocial: 100000,
     },
     activity: {
-      mainCnae: '4930-2/02',
+      mainCnae: '6201-5/01',
       secondaryCnaes: '',
-      businessAddress: 'Pátio Industrial, Galpão 3',
-      description: 'Transporte rodoviário de carga',
-    },
-    documents: [],
-    signature: '',
-  },
-  {
-    id: 'sub-4',
-    protocol: '2023-10-18-0004',
-    clientName: 'Ana Oliveira',
-    status: 'draft',
-    createdAt: '2023-10-18T16:45:00Z',
-    updatedAt: '2023-10-18T16:45:00Z',
-    partners: [],
-    company: {
-      type: 'ltda',
-      tradeName: 'Ana Clínica',
-      email: 'ana@clinica.com.br',
-      phone: '(31) 99999-1111',
-      zipCode: '30000-000',
-      suggestedName1: 'Ana Oliveira Serviços Médicos Ltda',
-      suggestedName2: '',
-      suggestedName3: '',
-      capitalSocial: 20000,
-    },
-    activity: {
-      mainCnae: '8630-5/03',
-      secondaryCnaes: '',
-      businessAddress: 'Rua da Saúde, 100',
-      description: 'Atividade médica ambulatorial',
-    },
-    documents: [],
-    signature: '',
-  },
-  {
-    id: 'sub-5',
-    protocol: '2023-10-19-0005',
-    clientName: 'Lucas Costa TI',
-    status: 'pending',
-    createdAt: '2023-10-19T11:20:00Z',
-    updatedAt: '2023-10-19T11:20:00Z',
-    partners: [],
-    company: {
-      type: 'mei',
-      tradeName: 'Lucas TI',
-      email: 'lucas@ti.com.br',
-      phone: '(41) 97777-2222',
-      zipCode: '40000-000',
-      suggestedName1: 'Lucas Costa MEI',
-      suggestedName2: '',
-      suggestedName3: '',
-      capitalSocial: 1000,
-    },
-    activity: {
-      mainCnae: '6209-1/00',
-      secondaryCnaes: '',
-      businessAddress: 'Trabalho Remoto',
-      description: 'Suporte técnico e manutenção',
+      businessAddress: 'Centro Comercial Modelo',
+      description: 'Desenvolvimento de software e serviços de TI.',
     },
     documents: [],
     signature: '',
@@ -441,7 +326,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           /* ignore */
         }
 
-        // Login Synchronization: Force fresh fetch, ignoring local state (background false to ensure it completes visually)
+        // Login Synchronization: Force fresh fetch, ignoring local state
         await syncSubmissions({ force: true, background: false, skipCache: true })
         return true
       }

@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
 import { useAppStore } from '@/store/AppContext'
 import { Button } from '@/components/ui/button'
@@ -11,9 +11,14 @@ import { Building2 } from 'lucide-react'
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
-  const { login, users } = useAppStore()
+  const { login, users, clearCache } = useAppStore()
   const navigate = useNavigate()
   const { toast } = useToast()
+
+  useEffect(() => {
+    // Zero Cache Persistence: Clear all caches when visiting the login page to prevent residue
+    clearCache()
+  }, [clearCache])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
