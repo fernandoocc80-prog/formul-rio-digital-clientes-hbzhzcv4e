@@ -17,7 +17,9 @@ export default function AdminLayout() {
   useEffect(() => {
     if (currentUser) {
       clearCache()
-      syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
+      syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {
+        /* ignore */
+      })
     }
   }, [location.pathname, currentUser, syncSubmissions, clearCache])
 

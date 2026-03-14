@@ -106,7 +106,9 @@ const saveRemoteDB = (data: Submission[]) => {
     const channel = new BroadcastChannel('empresaflow_notifications')
     channel.postMessage({ type: 'DB_UPDATED' })
     channel.close()
-  } catch (e) {}
+  } catch (e) {
+    /* ignore */
+  }
 }
 
 const fetchFromServerMock = async (): Promise<Submission[]> => {
@@ -142,7 +144,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       const cached = localStorage.getItem(LOCAL_CACHE_KEY)
       if (cached) return JSON.parse(cached)
-    } catch (e) {}
+    } catch (e) {
+      /* ignore */
+    }
     return getRemoteDB()
   })
 
@@ -255,9 +259,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
         channel.close()
-      } catch (e) {}
+      } catch (e) {
+        /* ignore */
+      }
 
-      syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
+      syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {
+        /* ignore */
+      })
       return newId
     },
     [syncSubmissions],
@@ -275,7 +283,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
         channel.close()
-      } catch (e) {}
+      } catch (e) {
+        /* ignore */
+      }
 
       await syncSubmissions({ force: true, background: true, skipCache: true })
     },
@@ -300,7 +310,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           const channel = new BroadcastChannel('empresaflow_notifications')
           channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
           channel.close()
-        } catch (e) {}
+        } catch (e) {
+          /* ignore */
+        }
 
         await syncSubmissions({ force: true, background: true, skipCache: true })
         return true
@@ -320,7 +332,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
       channel.close()
-    } catch (e) {}
+    } catch (e) {
+      /* ignore */
+    }
   }, [clearCache])
 
   const registerUser = useCallback(
@@ -339,7 +353,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'USERS_STATE_CHANGE' })
         channel.close()
-      } catch (e) {}
+      } catch (e) {
+        /* ignore */
+      }
     },
     [users],
   )
@@ -353,7 +369,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'USERS_STATE_CHANGE' })
         channel.close()
-      } catch (e) {}
+      } catch (e) {
+        /* ignore */
+      }
     },
     [users],
   )
@@ -384,7 +402,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setUsers(getUsersDB())
         }
       }
-    } catch (e) {}
+    } catch (e) {
+      /* ignore */
+    }
 
     window.addEventListener('storage', handleStorageChange)
 
