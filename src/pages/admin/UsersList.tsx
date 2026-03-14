@@ -27,7 +27,7 @@ export default function UsersList() {
       })
       return
     }
-    if (confirm('Tem certeza que deseja remover este administrador?')) {
+    if (confirm('Tem certeza que deseja remover este usuário?')) {
       removeUser(id)
       toast({ title: 'Usuário removido com sucesso!' })
     }
@@ -37,7 +37,7 @@ export default function UsersList() {
     <div className="space-y-6">
       <div className="flex flex-col sm:flex-row justify-between items-start sm:items-center gap-4">
         <div>
-          <h1 className="text-2xl font-bold">Usuários Administrativos</h1>
+          <h1 className="text-2xl font-bold">Gestão de Usuários</h1>
           <p className="text-muted-foreground">Gerencie quem tem acesso ao painel do sistema.</p>
         </div>
         <Button
@@ -53,8 +53,8 @@ export default function UsersList() {
 
       <Card>
         <CardHeader>
-          <CardTitle>Administradores ({users.length})</CardTitle>
-          <CardDescription>Lista de todos os usuários com acesso total ao sistema.</CardDescription>
+          <CardTitle>Usuários Cadastrados ({users.length})</CardTitle>
+          <CardDescription>Lista de todos os usuários com acesso ao sistema.</CardDescription>
         </CardHeader>
         <CardContent>
           <Table>
@@ -84,7 +84,8 @@ export default function UsersList() {
                   <TableCell>{user.email}</TableCell>
                   <TableCell>
                     <Badge variant="secondary" className="flex w-fit items-center gap-1">
-                      <Shield className="h-3 w-3" /> Admin
+                      <Shield className="h-3 w-3" />{' '}
+                      {user.role === 'colaborador' ? 'Colaborador' : 'Administrador'}
                     </Badge>
                   </TableCell>
                   <TableCell>{new Date(user.createdAt).toLocaleDateString('pt-BR')}</TableCell>

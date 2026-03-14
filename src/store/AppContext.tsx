@@ -9,7 +9,6 @@ import React, {
 } from 'react'
 import { Submission, AdminUser, AccessLog } from '@/types'
 
-// Version bumped to v5 to enforce Database Hard Reset across all devices
 const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v5'
 const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
 const USERS_STORAGE_KEY = 'empresaflow_users_v1'
@@ -54,60 +53,25 @@ interface AppState {
     background?: boolean
     skipCache?: boolean
   }) => Promise<void>
-  login: (email: string, passwordHash: string) => Promise<boolean>
+  login: (email: string, passwordHash: string) => Promise<AdminUser | null>
   logout: () => void
-  registerUser: (name: string, email: string, passwordHash: string) => void
+  registerUser: (
+    name: string,
+    email: string,
+    passwordHash: string,
+    role?: 'admin' | 'colaborador',
+  ) => void
   removeUser: (id: string) => void
   clearCache: () => void
 }
 
-const mockData: Submission[] = [
-  {
-    id: 'sub-model-1',
-    protocol: '2023-11-01-0001',
-    clientName: 'Modelo de Formulário',
-    status: 'approved',
-    createdAt: new Date().toISOString(),
-    updatedAt: new Date().toISOString(),
-    partners: [
-      {
-        id: 'p-model-1',
-        name: 'Sócio Modelo',
-        cpf: '111.222.333-44',
-        rg: '11.222.333-4',
-        address: 'Rua Exemplo, 123',
-        sharePercentage: 100,
-      },
-    ],
-    company: {
-      type: 'ltda',
-      tradeName: 'Empresa Modelo',
-      email: 'contato@empresamodelo.com.br',
-      phone: '(11) 98888-7777',
-      zipCode: '01000-000',
-      suggestedName1: 'Empresa Modelo Ltda',
-      suggestedName2: '',
-      suggestedName3: '',
-      capitalSocial: 100000,
-    },
-    activity: {
-      mainCnae: '6201-5/01',
-      secondaryCnaes: '',
-      businessAddress: 'Centro Comercial Modelo',
-      description: 'Desenvolvimento de software e serviços de TI.',
-    },
-    documents: [],
-    signature: '',
-  },
-]
+const mockData: Submission[] = []
 
 const getRemoteDB = (): Submission[] => {
   try {
     const saved = localStorage.getItem(MOCK_REMOTE_DB_KEY)
     if (saved) return JSON.parse(saved)
-  } catch (e) {
-    console.warn('Could not parse remote data', e)
-  }
+  } catch (e) {}
   localStorage.setItem(MOCK_REMOTE_DB_KEY, JSON.stringify(mockData))
   return mockData
 }
@@ -118,34 +82,32 @@ const saveRemoteDB = (data: Submission[]) => {
     const channel = new BroadcastChannel('empresaflow_notifications')
     channel.postMessage({ type: 'DB_UPDATED' })
     channel.close()
-  } catch (e) {
-    /* ignore */
-  }
+  } catch (e) {}
 }
 
 const fetchFromServerMock = async (): Promise<Submission[]> => {
-  return new Promise((resolve) => {
-    setTimeout(() => resolve(getRemoteDB()), 50)
-  })
+  return new Promise((resolve) => setTimeout(() => resolve(getRemoteDB()), 50))
 }
 
 const getUsersDB = (): AdminUser[] => {
   try {
     const saved = localStorage.getItem(USERS_STORAGE_KEY)
-    if (saved) return JSON.parse(saved)
-  } catch (e) {
-    console.warn('Could not parse users local storage', e)
-  }
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      return parsed.map((u: any) => ({ ...u, role: u.role || 'admin' }))
+    }
+  } catch (e) {}
   return []
 }
 
 const getCurrentUserDB = (): AdminUser | null => {
   try {
     const saved = localStorage.getItem(CURRENT_USER_KEY)
-    if (saved) return JSON.parse(saved)
-  } catch (e) {
-    console.warn('Could not parse current user local storage', e)
-  }
+    if (saved) {
+      const parsed = JSON.parse(saved)
+      return { ...parsed, role: parsed.role || 'admin' }
+    }
+  } catch (e) {}
   return null
 }
 
@@ -153,9 +115,7 @@ const getAccessLogsDB = (): AccessLog[] => {
   try {
     const saved = localStorage.getItem(ACCESS_LOGS_KEY)
     if (saved) return JSON.parse(saved)
-  } catch (e) {
-    console.warn('Could not parse access logs storage', e)
-  }
+  } catch (e) {}
   return []
 }
 
@@ -188,9 +148,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           localStorage.removeItem(k)
         }
       }
-    } catch (e) {
-      /* ignore */
-    }
+    } catch (e) {}
   }, [])
 
   const syncSubmissions = useCallback(
@@ -212,10 +170,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
 
       try {
-        if (options?.skipCache) {
-          clearCache()
-        }
-
+        if (options?.skipCache) clearCache()
         const serverData = await fetchFromServerMock()
         setSubmissions([...serverData])
         setLastSyncAt(new Date())
@@ -225,7 +180,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         )
         setSyncError(null)
       } catch (error) {
-        console.error('Failed to sync:', error)
         if (!options?.background) {
           setSyncStatus('error')
           setSyncError('Falha ao conectar com o servidor.')
@@ -246,7 +200,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     (data: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => {
       const newId = `sub-${Math.random().toString(36).substring(2, 9)}`
       const now = new Date()
-      const isoString = now.toISOString()
       const yyyy = now.getFullYear()
       const mm = String(now.getMonth() + 1).padStart(2, '0')
       const dd = String(now.getDate()).padStart(2, '0')
@@ -259,8 +212,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         ...data,
         id: newId,
         protocol,
-        createdAt: isoString,
-        updatedAt: isoString,
+        createdAt: now.toISOString(),
+        updatedAt: now.toISOString(),
       }
 
       const updatedDB = [newSubmission, ...remoteDB]
@@ -271,13 +224,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
         channel.close()
-      } catch (e) {
-        /* ignore */
-      }
+      } catch (e) {}
 
-      syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {
-        /* ignore */
-      })
+      syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
       return newId
     },
     [syncSubmissions],
@@ -296,9 +245,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
         channel.close()
-      } catch (e) {
-        /* ignore */
-      }
+      } catch (e) {}
 
       await syncSubmissions({ force: true, background: true, skipCache: true })
     },
@@ -313,7 +260,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const login = useCallback(
     async (email: string, passwordHash: string) => {
       const normalizedEmail = email.trim().toLowerCase()
-
       const user = users.find(
         (u) => u.email.trim().toLowerCase() === normalizedEmail && u.passwordHash === passwordHash,
       )
@@ -325,12 +271,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       else if (ua.includes('Firefox')) browser = 'Firefox'
       else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari'
 
-      const device =
-        /Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(
-          ua,
-        )
-          ? 'Mobile'
-          : 'Desktop'
+      const device = /Mobile|Android|iP(hone|od)/.test(ua) ? 'Mobile' : 'Desktop'
 
       const newLog: AccessLog = {
         id: `log-${Math.random().toString(36).substring(2, 9)}`,
@@ -351,21 +292,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (user) {
         setCurrentUser(user)
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user))
-
         clearCache()
 
         try {
           const channel = new BroadcastChannel('empresaflow_notifications')
           channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
           channel.close()
-        } catch (e) {
-          /* ignore */
-        }
+        } catch (e) {}
 
         await syncSubmissions({ force: true, background: false, skipCache: true })
-        return true
+        return user
       }
-      return false
+      return null
     },
     [users, syncSubmissions, clearCache],
   )
@@ -380,18 +318,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
       channel.close()
-    } catch (e) {
-      /* ignore */
-    }
+    } catch (e) {}
   }, [clearCache])
 
   const registerUser = useCallback(
-    (name: string, email: string, passwordHash: string) => {
+    (
+      name: string,
+      email: string,
+      passwordHash: string,
+      role: 'admin' | 'colaborador' = 'admin',
+    ) => {
       const newUser: AdminUser = {
         id: `usr-${Math.random().toString(36).substring(2, 9)}`,
         name: name.trim(),
         email: email.trim().toLowerCase(),
         passwordHash,
+        role,
         createdAt: new Date().toISOString(),
       }
       const updatedUsers = [...users, newUser]
@@ -401,9 +343,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'USERS_STATE_CHANGE' })
         channel.close()
-      } catch (e) {
-        /* ignore */
-      }
+      } catch (e) {}
     },
     [users],
   )
@@ -417,9 +357,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         const channel = new BroadcastChannel('empresaflow_notifications')
         channel.postMessage({ type: 'USERS_STATE_CHANGE' })
         channel.close()
-      } catch (e) {
-        /* ignore */
-      }
+      } catch (e) {}
     },
     [users],
   )
@@ -439,11 +377,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     try {
       channel = new BroadcastChannel('empresaflow_notifications')
       channel.onmessage = (event) => {
-        if (
-          event.data?.type === 'DB_UPDATED' ||
-          event.data?.type === 'NEW_SUBMISSION' ||
-          event.data?.type === 'UPDATE_SUBMISSION'
-        ) {
+        if (['DB_UPDATED', 'NEW_SUBMISSION', 'UPDATE_SUBMISSION'].includes(event.data?.type)) {
           syncSubmissions({ force: true, background: true, skipCache: true })
         } else if (event.data?.type === 'AUTH_STATE_CHANGE') {
           setCurrentUser(getCurrentUserDB())
@@ -451,12 +385,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           setUsers(getUsersDB())
         }
       }
-    } catch (e) {
-      /* ignore */
-    }
+    } catch (e) {}
 
     window.addEventListener('storage', handleStorageChange)
-
     return () => {
       window.removeEventListener('storage', handleStorageChange)
       if (channel) channel.close()
@@ -469,11 +400,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!currentUser) return
-
-    const intervalId = setInterval(() => {
-      syncSubmissions({ background: true })
-    }, 2000)
-
+    const intervalId = setInterval(() => syncSubmissions({ background: true }), 2000)
     const handleFocus = () => syncSubmissions({ force: true, background: true, skipCache: true })
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible')

@@ -95,8 +95,11 @@ export default function AdminLayout() {
               </h2>
             </div>
             <div className="flex items-center gap-3">
-              <div className="text-sm font-medium hidden sm:block pr-3 border-r text-slate-700">
-                {currentUser?.name || 'Administrador'}
+              <div className="text-sm font-medium hidden sm:block pr-3 border-r text-slate-700 text-right leading-tight">
+                {currentUser?.name || 'Usuário'}
+                <span className="block text-xs text-muted-foreground font-normal mt-0.5">
+                  {currentUser?.role === 'colaborador' ? 'Colaborador' : 'Administrador'}
+                </span>
               </div>
               <Button
                 variant="ghost"

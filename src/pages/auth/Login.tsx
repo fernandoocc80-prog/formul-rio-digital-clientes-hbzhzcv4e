@@ -42,12 +42,14 @@ export default function Login() {
 
     try {
       // Data Integrity on Login check happens inside the login context function
-      const success = await login(normalizedEmail, password)
+      const user = await login(normalizedEmail, password)
 
-      if (success) {
+      if (user) {
         toast({ title: 'Login realizado com sucesso!' })
-        // Session Continuity: correctly redirect to the original requested page or dashboard
-        navigate(from, { replace: true })
+        // Session Continuity: correctly redirect to the original requested page or workspace
+        const userRole = user.role || 'admin'
+        const dest = userRole === 'colaborador' && from === '/' ? '/colaborador' : from
+        navigate(dest, { replace: true })
       } else {
         setErrorMsg('Credenciais inválidas. Verifique seu e-mail e senha e tente novamente.')
         toast({
@@ -71,7 +73,7 @@ export default function Login() {
       </div>
       <Card className="w-full max-w-md shadow-lg">
         <CardHeader className="space-y-1 text-center">
-          <CardTitle className="text-2xl">Área Administrativa</CardTitle>
+          <CardTitle className="text-2xl">Acesso ao Sistema</CardTitle>
           <CardDescription>Insira suas credenciais para acessar o painel</CardDescription>
         </CardHeader>
         <CardContent>
@@ -89,7 +91,7 @@ export default function Login() {
               <Input
                 id="email"
                 type="email"
-                placeholder="admin@empresaflow.com.br"
+                placeholder="usuario@empresaflow.com.br"
                 value={email}
                 onChange={(e) => setEmail(e.target.value)}
                 autoCapitalize="none"
@@ -123,7 +125,7 @@ export default function Login() {
 
           {users.length === 0 ? (
             <div className="mt-6 text-center text-sm">
-              <p className="text-muted-foreground mb-2">Nenhum administrador cadastrado.</p>
+              <p className="text-muted-foreground mb-2">Nenhum usuário cadastrado.</p>
               <Link to="/register" className="text-blue-600 hover:underline font-medium">
                 Primeiro acesso? Crie uma conta de configuração.
               </Link>

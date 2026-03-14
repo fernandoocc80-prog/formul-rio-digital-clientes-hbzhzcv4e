@@ -5,6 +5,13 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card'
+import {
+  Select,
+  SelectContent,
+  SelectItem,
+  SelectTrigger,
+  SelectValue,
+} from '@/components/ui/select'
 import { useToast } from '@/hooks/use-toast'
 import { ArrowLeft, UserPlus } from 'lucide-react'
 
@@ -13,6 +20,7 @@ export default function RegisterUser() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
+  const [role, setRole] = useState<'admin' | 'colaborador'>('colaborador')
   const { registerUser } = useAppStore()
   const navigate = useNavigate()
   const { toast } = useToast()
@@ -24,8 +32,8 @@ export default function RegisterUser() {
       return
     }
     const normalizedEmail = email.trim().toLowerCase()
-    registerUser(name, normalizedEmail, password)
-    toast({ title: 'Usuário administrador cadastrado com sucesso!' })
+    registerUser(name, normalizedEmail, password, role)
+    toast({ title: 'Usuário cadastrado com sucesso!' })
     navigate('/admin/users')
   }
 
@@ -35,13 +43,13 @@ export default function RegisterUser() {
         <Button variant="ghost" size="icon" onClick={() => navigate(-1)}>
           <ArrowLeft className="h-5 w-5" />
         </Button>
-        <h1 className="text-2xl font-bold">Novo Administrador</h1>
+        <h1 className="text-2xl font-bold">Novo Usuário</h1>
       </div>
 
       <Card>
         <CardHeader>
           <CardTitle>Dados do Usuário</CardTitle>
-          <CardDescription>Cadastre um novo usuário com acesso administrativo.</CardDescription>
+          <CardDescription>Cadastre um novo usuário com acesso ao sistema.</CardDescription>
         </CardHeader>
         <CardContent>
           <form onSubmit={handleRegister} className="space-y-4">
@@ -62,6 +70,18 @@ export default function RegisterUser() {
                 spellCheck="false"
                 required
               />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="role">Nível de Acesso</Label>
+              <Select value={role} onValueChange={(val: 'admin' | 'colaborador') => setRole(val)}>
+                <SelectTrigger id="role">
+                  <SelectValue placeholder="Selecione o nível de acesso" />
+                </SelectTrigger>
+                <SelectContent>
+                  <SelectItem value="admin">Administrador</SelectItem>
+                  <SelectItem value="colaborador">Colaborador</SelectItem>
+                </SelectContent>
+              </Select>
             </div>
             <div className="space-y-2">
               <Label htmlFor="password">Senha</Label>

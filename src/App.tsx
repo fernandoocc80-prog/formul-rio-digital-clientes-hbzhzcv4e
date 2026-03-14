@@ -20,6 +20,7 @@ import FormSuccess from './pages/form/FormSuccess'
 import ShortLinkRedirect from './pages/form/ShortLinkRedirect'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import ColaboradorHome from './pages/ColaboradorHome'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -41,12 +42,18 @@ const App = () => (
           {/* Protected Administrative Routes */}
           <Route element={<ProtectedRoute />}>
             <Route element={<AdminLayout />}>
-              <Route path="/" element={<Index />} />
-              <Route path="/admin" element={<SubmissionsList />} />
-              <Route path="/admin/users" element={<UsersList />} />
-              <Route path="/admin/register-user" element={<RegisterUser />} />
-              <Route path="/admin/access-history" element={<AccessHistory />} />
-              <Route path="/admin/:id" element={<SubmissionDetail />} />
+              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/admin" element={<SubmissionsList />} />
+                <Route path="/admin/users" element={<UsersList />} />
+                <Route path="/admin/register-user" element={<RegisterUser />} />
+                <Route path="/admin/access-history" element={<AccessHistory />} />
+                <Route path="/admin/:id" element={<SubmissionDetail />} />
+              </Route>
+
+              <Route element={<ProtectedRoute allowedRoles={['colaborador']} />}>
+                <Route path="/colaborador" element={<ColaboradorHome />} />
+              </Route>
             </Route>
           </Route>
 

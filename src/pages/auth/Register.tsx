@@ -37,7 +37,7 @@ export default function Register() {
       return
     }
     const normalizedEmail = email.trim().toLowerCase()
-    registerUser(name, normalizedEmail, password)
+    registerUser(name, normalizedEmail, password, 'admin')
     toast({ title: 'Conta criada com sucesso!' })
     await login(normalizedEmail, password)
     navigate('/')

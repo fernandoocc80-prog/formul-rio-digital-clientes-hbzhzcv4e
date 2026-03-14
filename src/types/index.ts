@@ -57,6 +57,7 @@ export interface AdminUser {
   name: string
   email: string
   passwordHash: string
+  role?: 'admin' | 'colaborador'
   createdAt: string
 }
 
