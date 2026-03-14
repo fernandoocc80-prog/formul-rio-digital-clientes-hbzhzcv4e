@@ -327,6 +327,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const getSubmission = (id: string) => submissions.find((s) => s.id === id)
 
+  const updateEmailTemplate = useCallback((template: string) => {
+    setEmailTemplate(template)
+  }, [])
+
   const login = useCallback(
     (email: string, passwordHash: string) => {
       const user = users.find((u) => u.email === email && u.passwordHash === passwordHash)
