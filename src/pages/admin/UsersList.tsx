@@ -42,7 +42,7 @@ export default function UsersList() {
         </div>
         <Button
           asChild
-          className="bg-blue-600 hover:bg-blue-700 text-white shadow-elevation hover:scale-[1.02] transition-transform"
+          className="bg-blue-600 hover:bg-blue-700 text-white shadow-elevation hover:scale-[1.02] transition-transform w-full sm:w-auto"
         >
           <Link to="/admin/register-user">
             <PlusCircle className="mr-2 h-4 w-4" />
@@ -60,17 +60,17 @@ export default function UsersList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Nome</TableHead>
-                <TableHead>E-mail</TableHead>
-                <TableHead>Nível de Acesso</TableHead>
-                <TableHead>Data de Criação</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="min-w-[150px]">Nome</TableHead>
+                <TableHead className="min-w-[200px]">E-mail</TableHead>
+                <TableHead className="whitespace-nowrap">Nível de Acesso</TableHead>
+                <TableHead className="whitespace-nowrap">Data de Criação</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
               {users.map((user) => (
                 <TableRow key={user.id}>
-                  <TableCell className="font-medium">
+                  <TableCell className="font-medium whitespace-nowrap">
                     {user.name}
                     {user.id === currentUser?.id && (
                       <Badge
@@ -88,7 +88,9 @@ export default function UsersList() {
                       {user.role === 'colaborador' ? 'Colaborador' : 'Administrador'}
                     </Badge>
                   </TableCell>
-                  <TableCell>{new Date(user.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                  <TableCell className="whitespace-nowrap">
+                    {new Date(user.createdAt).toLocaleDateString('pt-BR')}
+                  </TableCell>
                   <TableCell className="text-right">
                     <Button
                       variant="ghost"

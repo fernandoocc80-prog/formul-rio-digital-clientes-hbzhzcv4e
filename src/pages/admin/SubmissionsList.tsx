@@ -284,12 +284,12 @@ export default function SubmissionsList() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Protocolo</TableHead>
-                <TableHead>Empresa</TableHead>
-                <TableHead>Contato</TableHead>
-                <TableHead>Data</TableHead>
-                <TableHead>Status</TableHead>
-                <TableHead className="text-right">Ações</TableHead>
+                <TableHead className="whitespace-nowrap">Protocolo</TableHead>
+                <TableHead className="min-w-[200px]">Empresa</TableHead>
+                <TableHead className="min-w-[150px]">Contato</TableHead>
+                <TableHead className="whitespace-nowrap">Data</TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
+                <TableHead className="text-right whitespace-nowrap">Ações</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -322,7 +322,9 @@ export default function SubmissionsList() {
                         {sub.company?.phone || '-'}
                       </div>
                     </TableCell>
-                    <TableCell>{new Date(sub.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                    <TableCell className="whitespace-nowrap">
+                      {new Date(sub.createdAt).toLocaleDateString('pt-BR')}
+                    </TableCell>
                     <TableCell>
                       <Select
                         value={sub.status}

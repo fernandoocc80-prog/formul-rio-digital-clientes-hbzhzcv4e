@@ -13,7 +13,6 @@ import { useAppStore } from '@/store/AppContext'
 export default function AccessHistory() {
   const { accessLogs, currentUser } = useAppStore()
 
-  // Ensure data uniqueness per authenticated account to monitor account health
   const userLogs = accessLogs.filter((log) => log.userEmail === currentUser?.email)
 
   return (
@@ -33,10 +32,12 @@ export default function AccessHistory() {
           <Table>
             <TableHeader>
               <TableRow>
-                <TableHead>Data / Hora</TableHead>
-                <TableHead className="hidden sm:table-cell">Dispositivo</TableHead>
-                <TableHead>Navegador</TableHead>
-                <TableHead>Status</TableHead>
+                <TableHead className="whitespace-nowrap">Data / Hora</TableHead>
+                <TableHead className="hidden sm:table-cell whitespace-nowrap">
+                  Dispositivo
+                </TableHead>
+                <TableHead className="whitespace-nowrap">Navegador</TableHead>
+                <TableHead className="whitespace-nowrap">Status</TableHead>
               </TableRow>
             </TableHeader>
             <TableBody>
@@ -49,7 +50,7 @@ export default function AccessHistory() {
               ) : (
                 userLogs.map((log) => (
                   <TableRow key={log.id}>
-                    <TableCell>
+                    <TableCell className="whitespace-nowrap">
                       <div className="font-medium">
                         {new Date(log.timestamp).toLocaleDateString('pt-BR')}
                       </div>

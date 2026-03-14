@@ -28,7 +28,7 @@ export function CompanyStep({ data, onChange }: Props) {
             <RadioGroup
               value={data.type || 'ltda'}
               onValueChange={(val) => handleChange('type', val)}
-              className="flex gap-6"
+              className="flex flex-col sm:flex-row gap-3 sm:gap-6"
             >
               <div className="flex items-center space-x-2">
                 <RadioGroupItem value="mei" id="mei" />

@@ -37,18 +37,22 @@ export default function SubmissionDetail() {
         </div>
         <div className="flex flex-wrap gap-2">
           <ShareFormDialog id={id}>
-            <Button variant="secondary">
+            <Button variant="secondary" className="flex-1 sm:flex-none">
               <Share2 className="h-4 w-4 mr-2" />
-              <span className="hidden sm:inline">Compartilhar</span>
+              <span>Compartilhar</span>
             </Button>
           </ShareFormDialog>
-          <Button variant="outline" onClick={() => setViewHtml(!viewHtml)}>
-            <Code className="h-4 w-4 mr-2" />
+          <Button
+            variant="outline"
+            onClick={() => setViewHtml(!viewHtml)}
+            className="flex-1 sm:flex-none"
+          >
+            <Code className="h-4 w-4 sm:mr-2" />
             <span className="hidden sm:inline">
               {viewHtml ? 'Ver Formatado' : 'Exportar Dados'}
             </span>
           </Button>
-          <Button onClick={handlePrint}>
+          <Button onClick={handlePrint} className="flex-1 sm:flex-none">
             <Printer className="h-4 w-4 mr-2" />
             Gerar PDF
           </Button>
@@ -67,10 +71,10 @@ export default function SubmissionDetail() {
           </CardContent>
         </Card>
       ) : (
-        <div className="print-break-inside-avoid bg-white p-8 rounded-lg border shadow-sm space-y-8">
+        <div className="print-break-inside-avoid bg-white p-5 sm:p-8 rounded-lg border shadow-sm space-y-8">
           <div className="text-center border-b pb-6">
-            <h2 className="text-3xl font-bold">Ficha de Abertura de Empresa</h2>
-            <p className="text-muted-foreground mt-2 font-mono text-lg">
+            <h2 className="text-2xl sm:text-3xl font-bold">Ficha de Abertura de Empresa</h2>
+            <p className="text-muted-foreground mt-2 font-mono text-base sm:text-lg">
               Protocolo: {submission.protocol}
             </p>
             <div className="mt-4 flex justify-center gap-2 print-only">
@@ -81,10 +85,10 @@ export default function SubmissionDetail() {
           </div>
 
           <section>
-            <h3 className="text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
+            <h3 className="text-lg sm:text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
               1. Dados da Empresa
             </h3>
-            <div className="grid grid-cols-2 gap-y-4 gap-x-6">
+            <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-4 gap-x-6">
               <div>
                 <p className="text-sm text-muted-foreground">Tipo Societário</p>
                 <p className="font-medium uppercase">{submission.company?.type || '-'}</p>
@@ -95,7 +99,7 @@ export default function SubmissionDetail() {
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">E-mail</p>
-                <p>{submission.company?.email || '-'}</p>
+                <p className="break-all">{submission.company?.email || '-'}</p>
               </div>
               <div>
                 <p className="text-sm text-muted-foreground">Telefone</p>
@@ -116,7 +120,7 @@ export default function SubmissionDetail() {
                 </p>
               </div>
               {(submission.company?.type === 'ltda' || submission.company?.type === 'slu') && (
-                <div className="col-span-2 mt-2">
+                <div className="col-span-1 sm:col-span-2 mt-2">
                   <p className="text-sm text-muted-foreground font-medium mb-1">
                     Opções de Razão Social
                   </p>
@@ -133,7 +137,7 @@ export default function SubmissionDetail() {
           <Separator />
 
           <section>
-            <h3 className="text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
+            <h3 className="text-lg sm:text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
               2. Atividades e Endereço
             </h3>
             <div className="grid gap-4">
@@ -163,7 +167,7 @@ export default function SubmissionDetail() {
           {submission.company?.type !== 'mei' && (
             <>
               <section className="print-break-inside-avoid">
-                <h3 className="text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
                   3. Quadro Societário
                 </h3>
                 <div className="space-y-4">
@@ -173,7 +177,7 @@ export default function SubmissionDetail() {
                         <h4 className="font-bold">Sócio {i + 1}</h4>
                         <Badge variant="secondary">{p.sharePercentage}% Quotas</Badge>
                       </div>
-                      <div className="grid grid-cols-2 gap-y-3 gap-x-4 text-sm">
+                      <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-3 gap-x-4 text-sm">
                         <div>
                           <span className="text-muted-foreground block">Nome</span> {p.name}
                         </div>
@@ -183,7 +187,7 @@ export default function SubmissionDetail() {
                         <div>
                           <span className="text-muted-foreground block">RG</span> {p.rg}
                         </div>
-                        <div className="col-span-2">
+                        <div className="col-span-1 sm:col-span-2">
                           <span className="text-muted-foreground block">Endereço Residencial</span>{' '}
                           {p.address}
                         </div>
@@ -200,7 +204,7 @@ export default function SubmissionDetail() {
           )}
 
           <section className="print-break-inside-avoid">
-            <h3 className="text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
+            <h3 className="text-lg sm:text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
               {submission.company?.type === 'mei' ? '3' : '4'}. Documentos Anexados
             </h3>
             <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
@@ -216,7 +220,9 @@ export default function SubmissionDetail() {
                   )}
                   <div>
                     <p className="font-medium text-sm">{doc.label}</p>
-                    <p className="text-xs text-muted-foreground">{doc.fileName || 'Pendente'}</p>
+                    <p className="text-xs text-muted-foreground break-all">
+                      {doc.fileName || 'Pendente'}
+                    </p>
                   </div>
                 </div>
               ))}

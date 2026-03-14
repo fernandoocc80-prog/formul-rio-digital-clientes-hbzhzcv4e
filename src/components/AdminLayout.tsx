@@ -13,11 +13,9 @@ export default function AdminLayout() {
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Feature: Session Consistency - Navigating between different routes triggers data verification and cache purging
   useEffect(() => {
     if (currentUser) {
       clearCache()
-      // Enforce real-time sync with backend to maintain strictly verified view state
       syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {
         /* ignore */
       })
@@ -30,9 +28,8 @@ export default function AdminLayout() {
       const osc = ctx.createOscillator()
       const gainNode = ctx.createGain()
 
-      // Create a short, pleasant double beep for notification
       osc.type = 'sine'
-      osc.frequency.setValueAtTime(880, ctx.currentTime) // A5
+      osc.frequency.setValueAtTime(880, ctx.currentTime)
       osc.frequency.exponentialRampToValueAtTime(440, ctx.currentTime + 0.1)
 
       gainNode.gain.setValueAtTime(0, ctx.currentTime)
@@ -49,7 +46,6 @@ export default function AdminLayout() {
     }
   }, [])
 
-  // Listen for real-time notifications from client form submissions
   useEffect(() => {
     let channel: BroadcastChannel | null = null
     try {
@@ -87,14 +83,14 @@ export default function AdminLayout() {
       <div className="flex min-h-screen w-full">
         <AdminSidebar />
         <div className="flex-1 w-full overflow-hidden flex flex-col">
-          <div className="p-4 border-b bg-white no-print flex items-center justify-between gap-4">
-            <div className="flex items-center gap-4">
+          <div className="p-4 border-b bg-white no-print flex items-center justify-between gap-2 sm:gap-4">
+            <div className="flex items-center gap-2 sm:gap-4">
               <SidebarTrigger />
               <h2 className="font-semibold text-sm text-muted-foreground hidden sm:block">
                 Painel de Controle
               </h2>
             </div>
-            <div className="flex items-center gap-3">
+            <div className="flex items-center gap-2 sm:gap-3">
               <div className="text-sm font-medium hidden sm:block pr-3 border-r text-slate-700 text-right leading-tight">
                 {currentUser?.name || 'Usuário'}
                 <span className="block text-xs text-muted-foreground font-normal mt-0.5">
@@ -105,14 +101,14 @@ export default function AdminLayout() {
                 variant="ghost"
                 size="sm"
                 onClick={handleLogout}
-                className="text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors"
+                className="text-slate-600 hover:text-red-600 hover:bg-red-50 transition-colors px-2 sm:px-3"
               >
                 <LogOut className="h-4 w-4 sm:mr-2" />
                 <span className="hidden sm:inline">Sair</span>
               </Button>
             </div>
           </div>
-          <main className="flex-1 p-6 overflow-auto bg-slate-50/50 animate-fade-in">
+          <main className="flex-1 p-4 sm:p-6 overflow-auto bg-slate-50/50 animate-fade-in">
             <Outlet />
           </main>
         </div>

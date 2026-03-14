@@ -42,7 +42,7 @@ export default function ColaboradorHome() {
   }
 
   return (
-    <div className="container py-6 max-w-5xl space-y-8 animate-fade-in">
+    <div className="container py-4 sm:py-6 max-w-5xl space-y-6 sm:space-y-8 animate-fade-in">
       <Card className="bg-gradient-to-r from-blue-50 to-indigo-50/50 border-blue-100 shadow-sm overflow-hidden relative">
         <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none hidden sm:block">
           <Sparkles className="w-32 h-32 text-blue-600" />
@@ -53,9 +53,7 @@ export default function ColaboradorHome() {
           </div>
           <div className="space-y-1.5">
             <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-800">
-              {currentUser?.name
-                ? `Bem-vindo de volta, ${currentUser.name}!`
-                : 'Bem-vindo ao Portal de Colaboradores EmpresaFlow.'}
+              {currentUser?.name ? `Bem-vindo, ${currentUser.name}!` : 'Portal de Colaboradores.'}
             </h1>
             <p className="text-slate-600 text-sm sm:text-base max-w-2xl">
               Pronto para gerenciar seus formulários e links de clientes?
@@ -109,11 +107,11 @@ export default function ColaboradorHome() {
                 <Input
                   value={PUBLIC_URL}
                   readOnly
-                  className="text-center bg-muted/50 font-mono text-sm"
+                  className="text-center bg-muted/50 font-mono text-xs sm:text-sm truncate px-2"
                 />
                 <Button size="lg" variant="outline" onClick={handleCopyLink} className="w-full">
                   <Copy className="w-4 h-4 mr-2" />
-                  Copiar Mensagem com Link
+                  Copiar Mensagem
                 </Button>
               </CardContent>
             </Card>
@@ -132,10 +130,10 @@ export default function ColaboradorHome() {
               <Table>
                 <TableHeader>
                   <TableRow>
-                    <TableHead>Cliente</TableHead>
-                    <TableHead>Tipo de Empresa</TableHead>
-                    <TableHead>Data de Envio</TableHead>
-                    <TableHead className="text-right">Ações</TableHead>
+                    <TableHead className="min-w-[150px]">Cliente</TableHead>
+                    <TableHead className="whitespace-nowrap">Tipo de Empresa</TableHead>
+                    <TableHead className="whitespace-nowrap">Data de Envio</TableHead>
+                    <TableHead className="text-right whitespace-nowrap">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
@@ -160,12 +158,14 @@ export default function ColaboradorHome() {
                             '-'
                           )}
                         </TableCell>
-                        <TableCell>{new Date(sub.createdAt).toLocaleDateString('pt-BR')}</TableCell>
+                        <TableCell className="whitespace-nowrap">
+                          {new Date(sub.createdAt).toLocaleDateString('pt-BR')}
+                        </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>
                             <Link to={`/colaborador/${sub.id}`}>
-                              <Eye className="w-4 h-4 mr-2" />
-                              Visualizar
+                              <Eye className="w-4 h-4 sm:mr-2" />
+                              <span className="hidden sm:inline">Visualizar</span>
                             </Link>
                           </Button>
                         </TableCell>
