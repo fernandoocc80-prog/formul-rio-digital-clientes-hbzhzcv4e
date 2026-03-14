@@ -1,5 +1,5 @@
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { PlusCircle, Link as LinkIcon, Eye } from 'lucide-react'
+import { PlusCircle, Link as LinkIcon, Eye, Sparkles } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -40,14 +40,26 @@ export default function ColaboradorHome() {
 
   return (
     <div className="container py-6 max-w-5xl space-y-8 animate-fade-in">
-      <section className="space-y-2">
-        <h1 className="text-3xl font-bold tracking-tight">
-          Olá, {currentUser?.name || 'Colaborador'}
-        </h1>
-        <p className="text-muted-foreground">
-          Bem-vindo ao seu espaço de trabalho. Gerencie novos processos e acompanhe os retornos.
-        </p>
-      </section>
+      <Card className="bg-gradient-to-r from-blue-50 to-indigo-50/50 border-blue-100 shadow-sm overflow-hidden relative">
+        <div className="absolute top-0 right-0 p-8 opacity-10 pointer-events-none hidden sm:block">
+          <Sparkles className="w-32 h-32 text-blue-600" />
+        </div>
+        <CardContent className="p-6 sm:p-8 flex items-center gap-5 relative z-10">
+          <div className="bg-white p-3.5 rounded-full shadow-sm text-blue-600 hidden sm:flex shrink-0 border border-blue-50">
+            <Sparkles className="w-6 h-6" />
+          </div>
+          <div className="space-y-1.5">
+            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-800">
+              {currentUser?.name
+                ? `Bem-vindo de volta, ${currentUser.name}!`
+                : 'Bem-vindo ao Portal de Colaboradores EmpresaFlow.'}
+            </h1>
+            <p className="text-slate-600 text-sm sm:text-base max-w-2xl">
+              Pronto para gerenciar seus formulários e links de clientes?
+            </p>
+          </div>
+        </CardContent>
+      </Card>
 
       <Tabs value={currentTab} onValueChange={handleTabChange} className="space-y-6">
         <TabsList className="grid w-full max-w-md grid-cols-2">
