@@ -1,4 +1,4 @@
-import { useState } from 'react'
+import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, Share2, Download, RefreshCw } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -57,6 +57,12 @@ export default function SubmissionsList() {
   const { submissions, updateSubmission, syncStatus, syncSubmissions } = useAppStore()
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
+
+  // Feature: Unified List Querying - Ensure filters are reset on mount to guarantee data parity
+  useEffect(() => {
+    setStatusFilter('all')
+    setTypeFilter('all')
+  }, [])
 
   const filtered = submissions.filter((s) => {
     if (statusFilter !== 'all' && s.status !== statusFilter) return false

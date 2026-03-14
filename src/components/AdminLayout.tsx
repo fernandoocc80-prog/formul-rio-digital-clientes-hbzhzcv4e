@@ -9,16 +9,17 @@ import { LogOut } from 'lucide-react'
 
 export default function AdminLayout() {
   const { toast } = useToast()
-  const { currentUser, logout, syncSubmissions } = useAppStore()
+  const { currentUser, logout, syncSubmissions, clearCache } = useAppStore()
   const navigate = useNavigate()
   const location = useLocation()
 
-  // Feature: Session Consistency - Navigating between different routes triggers data verification
+  // Feature: Session Consistency - Navigating between different routes triggers data verification and cache purging
   useEffect(() => {
     if (currentUser) {
+      clearCache()
       syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
     }
-  }, [location.pathname, currentUser, syncSubmissions])
+  }, [location.pathname, currentUser, syncSubmissions, clearCache])
 
   const playAlertSound = useCallback(() => {
     try {
