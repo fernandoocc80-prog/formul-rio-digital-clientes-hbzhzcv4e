@@ -119,8 +119,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
             'Cache-Control': 'no-cache',
             Pragma: 'no-cache',
           },
-        }).catch(() => {})
-      } catch (e) {}
+        }).catch(() => {
+          // ignore error
+        })
+      } catch (e) {
+        // ignore error
+      }
 
       const serverData = getDB()
 
@@ -218,9 +222,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'NEW_SUBMISSION', data: newSubmission })
       channel.close()
-    } catch (e) {}
+    } catch (e) {
+      // ignore error
+    }
 
-    syncSubmissions({ force: true }).catch(() => {})
+    syncSubmissions({ force: true }).catch(() => {
+      // ignore error
+    })
     return newId
   }
 
@@ -237,7 +245,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const channel = new BroadcastChannel('empresaflow_notifications')
       channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
       channel.close()
-    } catch (e) {}
+    } catch (e) {
+      // ignore error
+    }
 
     await syncSubmissions({ force: true })
   }
