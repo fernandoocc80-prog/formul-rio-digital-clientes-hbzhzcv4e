@@ -1,8 +1,6 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
 import { Eye, Share2, Download, RefreshCw } from 'lucide-react'
-import { formatDistanceToNow } from 'date-fns'
-import { ptBR } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -24,6 +22,7 @@ import {
 import { useAppStore } from '@/store/AppContext'
 import { ShareFormDialog } from '@/components/share/ShareFormDialog'
 import { EmailSettingsDialog } from '@/components/admin/EmailSettingsDialog'
+import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
 import { SubmissionStatus } from '@/types'
 import { cn } from '@/lib/utils'
 
@@ -55,7 +54,7 @@ const getStatusLabel = (status: string) => {
 }
 
 export default function SubmissionsList() {
-  const { submissions, updateSubmission, isSyncing, lastSyncAt, syncSubmissions } = useAppStore()
+  const { submissions, updateSubmission, syncStatus, syncSubmissions } = useAppStore()
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
 
@@ -123,21 +122,12 @@ export default function SubmissionsList() {
   return (
     <div className="space-y-6">
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
-        <div className="space-y-1">
+        <div className="space-y-2">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Gestão de Formulários</h1>
-            <Badge
-              variant="secondary"
-              className="hidden sm:flex items-center gap-1.5 font-normal text-muted-foreground cursor-pointer hover:bg-muted"
-              onClick={syncSubmissions}
-            >
-              <RefreshCw className={cn('h-3 w-3', isSyncing && 'animate-spin')} />
-              {isSyncing
-                ? 'Sincronizando...'
-                : lastSyncAt
-                  ? `Atualizado ${formatDistanceToNow(lastSyncAt, { addSuffix: true, locale: ptBR })}`
-                  : 'Atualizando...'}
-            </Badge>
+            <div className="hidden sm:block">
+              <SyncIndicator />
+            </div>
           </div>
           <p className="text-muted-foreground">
             Acompanhe e gerencie as solicitações de abertura de empresa.
@@ -188,9 +178,9 @@ export default function SubmissionsList() {
             size="sm"
             className="sm:hidden -mr-2"
             onClick={syncSubmissions}
-            disabled={isSyncing}
+            disabled={syncStatus === 'syncing'}
           >
-            <RefreshCw className={cn('h-4 w-4', isSyncing && 'animate-spin')} />
+            <RefreshCw className={cn('h-4 w-4', syncStatus === 'syncing' && 'animate-spin')} />
           </Button>
         </CardHeader>
         <CardContent>

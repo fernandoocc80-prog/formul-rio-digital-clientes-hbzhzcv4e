@@ -11,10 +11,11 @@ import { Submission } from '@/types'
 interface AppState {
   submissions: Submission[]
   emailTemplate: string
-  isSyncing: boolean
+  syncStatus: 'idle' | 'syncing' | 'error'
+  syncError: string | null
   lastSyncAt: Date | null
   addSubmission: (sub: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => string
-  updateSubmission: (id: string, data: Partial<Submission>) => void
+  updateSubmission: (id: string, data: Partial<Submission>) => Promise<void>
   getSubmission: (id: string) => Submission | undefined
   updateEmailTemplate: (template: string) => void
   syncSubmissions: () => Promise<void>
@@ -119,7 +120,8 @@ const getDB = (): Submission[] => {
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [submissions, setSubmissions] = useState<Submission[]>(getDB)
-  const [isSyncing, setIsSyncing] = useState(false)
+  const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle')
+  const [syncError, setSyncError] = useState<string | null>(null)
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
 
   const [emailTemplate, setEmailTemplate] = useState(() => {
@@ -131,7 +133,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   // Simulated cross-device sync fetching from our "backend" (localStorage)
   const syncSubmissions = useCallback(async () => {
-    setIsSyncing(true)
+    if (!navigator.onLine) {
+      setSyncStatus('error')
+      setSyncError('Você está offline. As alterações serão salvas localmente.')
+      return
+    }
+
+    setSyncStatus('syncing')
+    setSyncError(null)
+
     try {
       // Simulate network latency for visual feedback and realistic behavior
       await new Promise((resolve) => setTimeout(resolve, 800))
@@ -139,6 +149,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const serverData = getDB()
       setSubmissions(serverData)
       setLastSyncAt(new Date())
+      setSyncStatus('idle')
 
       // Ensure DB is initialized if empty
       if (!localStorage.getItem(LOCAL_STORAGE_KEY)) {
@@ -146,8 +157,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       }
     } catch (error) {
       console.error('Failed to sync submissions:', error)
-    } finally {
-      setIsSyncing(false)
+      setSyncStatus('error')
+      setSyncError('Falha ao conectar com a nuvem.')
     }
   }, [])
 
@@ -159,10 +170,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     // Initial Hydration
     syncSubmissions()
 
-    // Background Auto-Refresh Polling every 30 seconds
+    // Background Auto-Refresh Polling every 10 seconds for real-time feel
     const intervalId = setInterval(() => {
       syncSubmissions()
-    }, 30000)
+    }, 10000)
+
+    const handleFocus = () => syncSubmissions()
+    const handleOnline = () => syncSubmissions()
+    const handleOffline = () => {
+      setSyncStatus('error')
+      setSyncError('Conexão perdida. Modo offline ativado.')
+    }
 
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === LOCAL_STORAGE_KEY) {
@@ -173,10 +191,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         setEmailTemplate(e.newValue)
       }
     }
+
+    window.addEventListener('focus', handleFocus)
+    window.addEventListener('online', handleOnline)
+    window.addEventListener('offline', handleOffline)
     window.addEventListener('storage', handleStorageChange)
 
     return () => {
       clearInterval(intervalId)
+      window.removeEventListener('focus', handleFocus)
+      window.removeEventListener('online', handleOnline)
+      window.removeEventListener('offline', handleOffline)
       window.removeEventListener('storage', handleStorageChange)
     }
   }, [syncSubmissions])
@@ -206,7 +231,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
     // Optimistic UI update
     setSubmissions((prev) => [newSubmission, ...prev])
-    syncSubmissions() // Queue a full reconciliation
+
+    syncSubmissions().catch(() => {
+      setSyncStatus('error')
+      setSyncError('Salvo localmente. Aguardando conexão para enviar à nuvem.')
+    })
 
     try {
       const channel = new BroadcastChannel('empresaflow_notifications')
@@ -220,22 +249,33 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }
 
   const updateSubmission = async (id: string, data: Partial<Submission>) => {
-    // Fetch latest truth to prevent overwriting updates from other devices
-    const currentDB = getDB()
-    const updatedDB = currentDB.map((s) =>
-      s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s,
-    )
+    try {
+      // Fetch latest truth to prevent overwriting updates from other devices
+      const currentDB = getDB()
+      const updatedDB = currentDB.map((s) =>
+        s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s,
+      )
 
-    // Save truth
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
+      // Save truth
+      localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
 
-    // Optimistic UI update
-    setSubmissions((prev) =>
-      prev.map((s) => (s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s)),
-    )
+      // Optimistic UI update
+      setSubmissions(updatedDB)
 
-    // Trigger background sync to ensure full consistency
-    syncSubmissions()
+      try {
+        const channel = new BroadcastChannel('empresaflow_notifications')
+        channel.postMessage({ type: 'UPDATE_SUBMISSION', data: { id, ...data } })
+        channel.close()
+      } catch (e) {
+        console.warn('BroadcastChannel not supported', e)
+      }
+
+      // Trigger background sync to ensure full consistency with the cloud
+      await syncSubmissions()
+    } catch (err) {
+      setSyncStatus('error')
+      setSyncError('Falha ao salvar no servidor. Salvo apenas localmente.')
+    }
   }
 
   const getSubmission = (id: string) => submissions.find((s) => s.id === id)
@@ -247,7 +287,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       value={{
         submissions,
         emailTemplate,
-        isSyncing,
+        syncStatus,
+        syncError,
         lastSyncAt,
         addSubmission,
         updateSubmission,

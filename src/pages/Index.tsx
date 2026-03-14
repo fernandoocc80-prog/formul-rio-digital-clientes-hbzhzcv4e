@@ -6,6 +6,7 @@ import { Input } from '@/components/ui/input'
 import { StatusChart } from '@/components/dashboard/StatusChart'
 import { useAppStore } from '@/store/AppContext'
 import { ShareFormDialog } from '@/components/share/ShareFormDialog'
+import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
 
 export default function Index() {
   const navigate = useNavigate()
@@ -18,8 +19,11 @@ export default function Index() {
   return (
     <div className="container py-8 max-w-6xl space-y-8">
       <section className="flex flex-col md:flex-row justify-between items-start md:items-center gap-4">
-        <div>
-          <h1 className="text-3xl font-bold tracking-tight">Bem-vindo, Contador</h1>
+        <div className="space-y-2">
+          <div className="flex items-center gap-3">
+            <h1 className="text-3xl font-bold tracking-tight">Bem-vindo, Contador</h1>
+            <SyncIndicator />
+          </div>
           <p className="text-muted-foreground mt-1">
             Aqui está o resumo dos seus processos de abertura de empresas.
           </p>
