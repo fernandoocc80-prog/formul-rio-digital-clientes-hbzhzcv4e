@@ -1,13 +1,23 @@
-import React, { createContext, useContext, useState, useEffect, ReactNode } from 'react'
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  ReactNode,
+  useCallback,
+} from 'react'
 import { Submission } from '@/types'
 
 interface AppState {
   submissions: Submission[]
   emailTemplate: string
+  isSyncing: boolean
+  lastSyncAt: Date | null
   addSubmission: (sub: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => string
   updateSubmission: (id: string, data: Partial<Submission>) => void
   getSubmission: (id: string) => Submission | undefined
   updateEmailTemplate: (template: string) => void
+  syncSubmissions: () => Promise<void>
 }
 
 const mockData: Submission[] = [
@@ -97,16 +107,20 @@ const AppContext = createContext<AppState | undefined>(undefined)
 const LOCAL_STORAGE_KEY = 'empresaflow_submissions_v1'
 const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
 
+const getDB = (): Submission[] => {
+  try {
+    const saved = localStorage.getItem(LOCAL_STORAGE_KEY)
+    if (saved) return JSON.parse(saved)
+  } catch (e) {
+    console.warn('Could not parse local storage data', e)
+  }
+  return mockData
+}
+
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  const [submissions, setSubmissions] = useState<Submission[]>(() => {
-    try {
-      const saved = localStorage.getItem(LOCAL_STORAGE_KEY)
-      if (saved) return JSON.parse(saved)
-    } catch (e) {
-      console.warn('Could not read from local storage', e)
-    }
-    return mockData
-  })
+  const [submissions, setSubmissions] = useState<Submission[]>(getDB)
+  const [isSyncing, setIsSyncing] = useState(false)
+  const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
 
   const [emailTemplate, setEmailTemplate] = useState(() => {
     return (
@@ -115,30 +129,57 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     )
   })
 
-  useEffect(() => {
-    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(submissions))
-  }, [submissions])
+  // Simulated cross-device sync fetching from our "backend" (localStorage)
+  const syncSubmissions = useCallback(async () => {
+    setIsSyncing(true)
+    try {
+      // Simulate network latency for visual feedback and realistic behavior
+      await new Promise((resolve) => setTimeout(resolve, 800))
+
+      const serverData = getDB()
+      setSubmissions(serverData)
+      setLastSyncAt(new Date())
+
+      // Ensure DB is initialized if empty
+      if (!localStorage.getItem(LOCAL_STORAGE_KEY)) {
+        localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(serverData))
+      }
+    } catch (error) {
+      console.error('Failed to sync submissions:', error)
+    } finally {
+      setIsSyncing(false)
+    }
+  }, [])
 
   useEffect(() => {
     localStorage.setItem(EMAIL_TEMPLATE_KEY, emailTemplate)
   }, [emailTemplate])
 
   useEffect(() => {
+    // Initial Hydration
+    syncSubmissions()
+
+    // Background Auto-Refresh Polling every 30 seconds
+    const intervalId = setInterval(() => {
+      syncSubmissions()
+    }, 30000)
+
     const handleStorageChange = (e: StorageEvent) => {
-      if (e.key === LOCAL_STORAGE_KEY && e.newValue) {
-        try {
-          setSubmissions(JSON.parse(e.newValue))
-        } catch (err) {
-          console.error('Error parsing synced data', err)
-        }
+      if (e.key === LOCAL_STORAGE_KEY) {
+        // Cross-tab synchronization immediately responds to changes
+        syncSubmissions()
       }
       if (e.key === EMAIL_TEMPLATE_KEY && e.newValue) {
         setEmailTemplate(e.newValue)
       }
     }
     window.addEventListener('storage', handleStorageChange)
-    return () => window.removeEventListener('storage', handleStorageChange)
-  }, [])
+
+    return () => {
+      clearInterval(intervalId)
+      window.removeEventListener('storage', handleStorageChange)
+    }
+  }, [syncSubmissions])
 
   const addSubmission = (data: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => {
     const newId = `sub-${Math.random().toString(36).substring(2, 9)}`
@@ -159,7 +200,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       updatedAt: isoString,
     }
 
+    // Write to DB first (Conflict Prevention strategy)
+    const currentDB = getDB()
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify([newSubmission, ...currentDB]))
+
+    // Optimistic UI update
     setSubmissions((prev) => [newSubmission, ...prev])
+    syncSubmissions() // Queue a full reconciliation
 
     try {
       const channel = new BroadcastChannel('empresaflow_notifications')
@@ -172,10 +219,23 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     return newId
   }
 
-  const updateSubmission = (id: string, data: Partial<Submission>) => {
+  const updateSubmission = async (id: string, data: Partial<Submission>) => {
+    // Fetch latest truth to prevent overwriting updates from other devices
+    const currentDB = getDB()
+    const updatedDB = currentDB.map((s) =>
+      s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s,
+    )
+
+    // Save truth
+    localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
+
+    // Optimistic UI update
     setSubmissions((prev) =>
       prev.map((s) => (s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s)),
     )
+
+    // Trigger background sync to ensure full consistency
+    syncSubmissions()
   }
 
   const getSubmission = (id: string) => submissions.find((s) => s.id === id)
@@ -187,10 +247,13 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       value={{
         submissions,
         emailTemplate,
+        isSyncing,
+        lastSyncAt,
         addSubmission,
         updateSubmission,
         getSubmission,
         updateEmailTemplate,
+        syncSubmissions,
       }}
     >
       {children}

@@ -32,6 +32,9 @@
     "README.md"
   ],
   "deployment": {
-    "lastDevBuildRef": "efac613"
+    "lastDevBuildRef": "ebaeddb",
+    "lastProdBuildRef": "ebaeddb",
+    "publishedAt": "2026-03-13T21:33:55.746Z",
+    "lastPublishedRef": "ebaeddb"
   }
 }

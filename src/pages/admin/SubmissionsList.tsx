@@ -1,6 +1,8 @@
 import { useState } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Share2, Download } from 'lucide-react'
+import { Eye, Share2, Download, RefreshCw } from 'lucide-react'
+import { formatDistanceToNow } from 'date-fns'
+import { ptBR } from 'date-fns/locale'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -23,6 +25,7 @@ import { useAppStore } from '@/store/AppContext'
 import { ShareFormDialog } from '@/components/share/ShareFormDialog'
 import { EmailSettingsDialog } from '@/components/admin/EmailSettingsDialog'
 import { SubmissionStatus } from '@/types'
+import { cn } from '@/lib/utils'
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -52,7 +55,7 @@ const getStatusLabel = (status: string) => {
 }
 
 export default function SubmissionsList() {
-  const { submissions, updateSubmission } = useAppStore()
+  const { submissions, updateSubmission, isSyncing, lastSyncAt, syncSubmissions } = useAppStore()
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
 
@@ -119,21 +122,35 @@ export default function SubmissionsList() {
 
   return (
     <div className="space-y-6">
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
-        <div>
-          <h1 className="text-2xl font-bold">Gestão de Formulários</h1>
+      <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
+        <div className="space-y-1">
+          <div className="flex items-center gap-3">
+            <h1 className="text-2xl font-bold">Gestão de Formulários</h1>
+            <Badge
+              variant="secondary"
+              className="hidden sm:flex items-center gap-1.5 font-normal text-muted-foreground cursor-pointer hover:bg-muted"
+              onClick={syncSubmissions}
+            >
+              <RefreshCw className={cn('h-3 w-3', isSyncing && 'animate-spin')} />
+              {isSyncing
+                ? 'Sincronizando...'
+                : lastSyncAt
+                  ? `Atualizado ${formatDistanceToNow(lastSyncAt, { addSuffix: true, locale: ptBR })}`
+                  : 'Atualizando...'}
+            </Badge>
+          </div>
           <p className="text-muted-foreground">
             Acompanhe e gerencie as solicitações de abertura de empresa.
           </p>
         </div>
-        <div className="flex flex-wrap items-center gap-3 w-full md:w-auto">
+        <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           <EmailSettingsDialog />
-          <Button variant="outline" onClick={handleExportCSV} className="w-full md:w-auto">
+          <Button variant="outline" onClick={handleExportCSV} className="flex-1 md:flex-none">
             <Download className="h-4 w-4 mr-2" />
             Exportar CSV
           </Button>
           <ShareFormDialog id="new">
-            <Button variant="outline" className="w-full md:w-auto">
+            <Button variant="outline" className="flex-1 md:flex-none">
               <Share2 className="h-4 w-4 mr-2" />
               Compartilhar Formulário
             </Button>
@@ -164,8 +181,17 @@ export default function SubmissionsList() {
       </div>
 
       <Card>
-        <CardHeader>
+        <CardHeader className="flex flex-row items-center justify-between pb-4">
           <CardTitle>Todos os Processos</CardTitle>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="sm:hidden -mr-2"
+            onClick={syncSubmissions}
+            disabled={isSyncing}
+          >
+            <RefreshCw className={cn('h-4 w-4', isSyncing && 'animate-spin')} />
+          </Button>
         </CardHeader>
         <CardContent>
           <Table>
