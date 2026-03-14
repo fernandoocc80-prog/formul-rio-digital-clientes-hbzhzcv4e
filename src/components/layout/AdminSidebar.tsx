@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, FileText, Settings, ShieldCheck } from 'lucide-react'
+import { LayoutDashboard, FileText, Settings, ShieldCheck, History } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -15,9 +15,10 @@ export function AdminSidebar() {
   const location = useLocation()
 
   const menuItems = [
-    { title: 'Visão Geral', icon: LayoutDashboard, path: '/' },
+    { title: 'Dashboard', icon: LayoutDashboard, path: '/' },
     { title: 'Todos Processos', icon: FileText, path: '/admin' },
     { title: 'Administradores', icon: ShieldCheck, path: '/admin/users' },
+    { title: 'Histórico de Acesso', icon: History, path: '/admin/access-history' },
     { title: 'Configurações', icon: Settings, path: '/admin/settings' },
   ]
 

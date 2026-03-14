@@ -14,6 +14,7 @@ import SubmissionsList from './pages/admin/SubmissionsList'
 import SubmissionDetail from './pages/admin/SubmissionDetail'
 import UsersList from './pages/admin/UsersList'
 import RegisterUser from './pages/admin/RegisterUser'
+import AccessHistory from './pages/admin/AccessHistory'
 import ClientForm from './pages/form/ClientForm'
 import FormSuccess from './pages/form/FormSuccess'
 import ShortLinkRedirect from './pages/form/ShortLinkRedirect'
@@ -44,6 +45,7 @@ const App = () => (
               <Route path="/admin" element={<SubmissionsList />} />
               <Route path="/admin/users" element={<UsersList />} />
               <Route path="/admin/register-user" element={<RegisterUser />} />
+              <Route path="/admin/access-history" element={<AccessHistory />} />
               <Route path="/admin/:id" element={<SubmissionDetail />} />
             </Route>
           </Route>

@@ -59,3 +59,13 @@ export interface AdminUser {
   passwordHash: string
   createdAt: string
 }
+
+export interface AccessLog {
+  id: string
+  userId: string
+  userEmail: string
+  timestamp: string
+  device: string
+  browser: string
+  status: 'success' | 'failed'
+}

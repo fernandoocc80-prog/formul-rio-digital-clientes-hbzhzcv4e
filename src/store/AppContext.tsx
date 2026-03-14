@@ -7,16 +7,15 @@ import React, {
   useCallback,
   useRef,
 } from 'react'
-import { Submission, AdminUser } from '@/types'
+import { Submission, AdminUser, AccessLog } from '@/types'
 
 // Version bumped to v5 to enforce Database Hard Reset across all devices
 const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v5'
 const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
 const USERS_STORAGE_KEY = 'empresaflow_users_v1'
 const CURRENT_USER_KEY = 'empresaflow_current_user_v1'
+const ACCESS_LOGS_KEY = 'empresaflow_access_logs_v1'
 
-// Explicit Cache Invalidation: clear old versions and local/session storage during initialization
-// This ensures the "Source of Truth" purges all old disjointed records on fresh loads
 if (typeof window !== 'undefined') {
   try {
     const legacyKeys = [
@@ -45,6 +44,7 @@ interface AppState {
   lastSyncAt: Date | null
   users: AdminUser[]
   currentUser: AdminUser | null
+  accessLogs: AccessLog[]
   addSubmission: (sub: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => string
   updateSubmission: (id: string, data: Partial<Submission>) => Promise<void>
   getSubmission: (id: string) => Submission | undefined
@@ -61,7 +61,6 @@ interface AppState {
   clearCache: () => void
 }
 
-// Sample Data Seeding: A single baseline Model submission
 const mockData: Submission[] = [
   {
     id: 'sub-model-1',
@@ -150,12 +149,20 @@ const getCurrentUserDB = (): AdminUser | null => {
   return null
 }
 
+const getAccessLogsDB = (): AccessLog[] => {
+  try {
+    const saved = localStorage.getItem(ACCESS_LOGS_KEY)
+    if (saved) return JSON.parse(saved)
+  } catch (e) {
+    console.warn('Could not parse access logs storage', e)
+  }
+  return []
+}
+
 const AppContext = createContext<AppState | undefined>(undefined)
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
-  // Stateless Data Fetching: We no longer initialize from local cache. Starts empty.
   const [submissions, setSubmissions] = useState<Submission[]>([])
-
   const [syncStatus, setSyncStatus] = useState<'idle' | 'syncing' | 'error'>('idle')
   const [syncError, setSyncError] = useState<string | null>(null)
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
@@ -163,6 +170,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const [users, setUsers] = useState<AdminUser[]>(getUsersDB)
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(getCurrentUserDB)
+  const [accessLogs, setAccessLogs] = useState<AccessLog[]>(getAccessLogsDB)
 
   const [emailTemplate, setEmailTemplate] = useState(() => {
     return (
@@ -209,8 +217,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         }
 
         const serverData = await fetchFromServerMock()
-
-        // Directly apply the server's single source of truth without relying on persistent cache
         setSubmissions([...serverData])
         setLastSyncAt(new Date())
 
@@ -306,19 +312,46 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const login = useCallback(
     async (email: string, passwordHash: string) => {
-      // Normalize email for mobile validation consistency (auto-cap, trailing spaces)
       const normalizedEmail = email.trim().toLowerCase()
 
       const user = users.find(
         (u) => u.email.trim().toLowerCase() === normalizedEmail && u.passwordHash === passwordHash,
       )
 
+      const ua = navigator.userAgent
+      let browser = 'Outro'
+      if (ua.includes('Edg')) browser = 'Edge'
+      else if (ua.includes('Chrome')) browser = 'Chrome'
+      else if (ua.includes('Firefox')) browser = 'Firefox'
+      else if (ua.includes('Safari') && !ua.includes('Chrome')) browser = 'Safari'
+
+      const device =
+        /Mobile|Android|iP(hone|od)|IEMobile|BlackBerry|Kindle|Silk-Accelerated|(hpw|web)OS|Opera M(obi|ini)/.test(
+          ua,
+        )
+          ? 'Mobile'
+          : 'Desktop'
+
+      const newLog: AccessLog = {
+        id: `log-${Math.random().toString(36).substring(2, 9)}`,
+        userId: user ? user.id : 'unknown',
+        userEmail: normalizedEmail,
+        timestamp: new Date().toISOString(),
+        device,
+        browser,
+        status: user ? 'success' : 'failed',
+      }
+
+      setAccessLogs((prev) => {
+        const logs = [newLog, ...prev].slice(0, 500)
+        localStorage.setItem(ACCESS_LOGS_KEY, JSON.stringify(logs))
+        return logs
+      })
+
       if (user) {
         setCurrentUser(user)
         localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user))
 
-        // Session Data Cleanup during authentication flow before redirect
-        // We only clear submission caches, not user data
         clearCache()
 
         try {
@@ -329,8 +362,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           /* ignore */
         }
 
-        // Login Synchronization: Force fresh fetch, ignoring local state
-        // This ensures the "1 Registro Modelo" is loaded correctly from the server
         await syncSubmissions({ force: true, background: false, skipCache: true })
         return true
       }
@@ -397,6 +428,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === CURRENT_USER_KEY) setCurrentUser(getCurrentUserDB())
       if (e.key === USERS_STORAGE_KEY) setUsers(getUsersDB())
+      if (e.key === ACCESS_LOGS_KEY) setAccessLogs(getAccessLogsDB())
       if (e.key === EMAIL_TEMPLATE_KEY)
         setEmailTemplate(localStorage.getItem(EMAIL_TEMPLATE_KEY) || '')
       if (e.key === MOCK_REMOTE_DB_KEY)
@@ -431,12 +463,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     }
   }, [syncSubmissions])
 
-  // Initial fetch on mount to guarantee state matches server DB
   useEffect(() => {
     syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
   }, [syncSubmissions])
 
-  // Admin polling and focused synchronization
   useEffect(() => {
     if (!currentUser) return
 
@@ -470,6 +500,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         lastSyncAt,
         users,
         currentUser,
+        accessLogs,
         addSubmission,
         updateSubmission,
         getSubmission,

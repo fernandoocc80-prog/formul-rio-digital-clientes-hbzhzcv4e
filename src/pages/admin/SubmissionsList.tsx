@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Share2, Download, RefreshCw } from 'lucide-react'
+import { Eye, Share2, Download, RefreshCw, CalendarIcon, X } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -19,6 +19,8 @@ import {
   SelectTrigger,
   SelectValue,
 } from '@/components/ui/select'
+import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
+import { Calendar } from '@/components/ui/calendar'
 import { useAppStore } from '@/store/AppContext'
 import { ShareFormDialog } from '@/components/share/ShareFormDialog'
 import { EmailSettingsDialog } from '@/components/admin/EmailSettingsDialog'
@@ -57,18 +59,45 @@ export default function SubmissionsList() {
   const { submissions, updateSubmission, syncStatus, syncSubmissions } = useAppStore()
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
+  const [startDate, setStartDate] = useState<Date | undefined>(undefined)
+  const [endDate, setEndDate] = useState<Date | undefined>(undefined)
 
-  // Feature: Unified List Querying & Real-time Reflection
-  // Fetch fresh data bypassing cache to guarantee UI Integrity on mount
   useEffect(() => {
     setStatusFilter('all')
     setTypeFilter('all')
+    setStartDate(undefined)
+    setEndDate(undefined)
     syncSubmissions({ force: true, background: false, skipCache: true }).catch(() => {})
   }, [syncSubmissions])
+
+  const handleClearFilters = () => {
+    setStatusFilter('all')
+    setTypeFilter('all')
+    setStartDate(undefined)
+    setEndDate(undefined)
+  }
 
   const filtered = submissions.filter((s) => {
     if (statusFilter !== 'all' && s.status !== statusFilter) return false
     if (typeFilter !== 'all' && s.company?.type !== typeFilter) return false
+
+    if (startDate || endDate) {
+      const subDate = new Date(s.createdAt)
+      subDate.setHours(0, 0, 0, 0)
+
+      if (startDate) {
+        const start = new Date(startDate)
+        start.setHours(0, 0, 0, 0)
+        if (subDate.getTime() < start.getTime()) return false
+      }
+
+      if (endDate) {
+        const end = new Date(endDate)
+        end.setHours(0, 0, 0, 0)
+        if (subDate.getTime() > end.getTime()) return false
+      }
+    }
+
     return true
   })
 
@@ -127,13 +156,14 @@ export default function SubmissionsList() {
     URL.revokeObjectURL(url)
   }
 
+  const dateFormatter = new Intl.DateTimeFormat('pt-BR')
+
   return (
     <div className="space-y-6">
       <div className="flex flex-col xl:flex-row xl:items-end justify-between gap-4">
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Gestão de Formulários</h1>
-            {/* Visual Parity Confirmation */}
             <Badge variant="outline" className="bg-white dark:bg-slate-950 font-mono text-sm px-2">
               Total: {submissions.length} Processo{submissions.length !== 1 && 's'}
             </Badge>
@@ -154,37 +184,92 @@ export default function SubmissionsList() {
           <ShareFormDialog id="new">
             <Button variant="outline" className="flex-1 md:flex-none">
               <Share2 className="h-4 w-4 mr-2" />
-              Compartilhar Formulário
+              Compartilhar Link
             </Button>
           </ShareFormDialog>
-          <Select value={typeFilter} onValueChange={setTypeFilter}>
-            <SelectTrigger className="w-full md:w-[150px]">
-              <SelectValue placeholder="Tipo" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos Tipos</SelectItem>
-              <SelectItem value="mei">MEI</SelectItem>
-              <SelectItem value="ltda">LTDA</SelectItem>
-            </SelectContent>
-          </Select>
-          <Select value={statusFilter} onValueChange={setStatusFilter}>
-            <SelectTrigger className="w-full md:w-[150px]">
-              <SelectValue placeholder="Status" />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="all">Todos Status</SelectItem>
-              <SelectItem value="draft">Rascunho</SelectItem>
-              <SelectItem value="pending">Pendente</SelectItem>
-              <SelectItem value="under_review">Em análise</SelectItem>
-              <SelectItem value="approved">Aprovado</SelectItem>
-            </SelectContent>
-          </Select>
         </div>
+      </div>
+
+      {/* Filtros Container */}
+      <div className="bg-white border rounded-lg p-4 flex flex-wrap items-center gap-3 w-full shadow-sm">
+        <span className="text-sm font-medium text-slate-700 w-full sm:w-auto mr-1">Filtros:</span>
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                'w-full sm:w-[130px] justify-start text-left font-normal',
+                !startDate && 'text-muted-foreground',
+              )}
+            >
+              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+              {startDate ? dateFormatter.format(startDate) : 'Data Inicial'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={startDate} onSelect={setStartDate} initialFocus />
+          </PopoverContent>
+        </Popover>
+
+        <Popover>
+          <PopoverTrigger asChild>
+            <Button
+              variant="outline"
+              size="sm"
+              className={cn(
+                'w-full sm:w-[130px] justify-start text-left font-normal',
+                !endDate && 'text-muted-foreground',
+              )}
+            >
+              <CalendarIcon className="mr-2 h-3.5 w-3.5" />
+              {endDate ? dateFormatter.format(endDate) : 'Data Final'}
+            </Button>
+          </PopoverTrigger>
+          <PopoverContent className="w-auto p-0" align="start">
+            <Calendar mode="single" selected={endDate} onSelect={setEndDate} initialFocus />
+          </PopoverContent>
+        </Popover>
+
+        <Select value={typeFilter} onValueChange={setTypeFilter}>
+          <SelectTrigger className="w-full sm:w-[130px] h-9">
+            <SelectValue placeholder="Tipo" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Tipos</SelectItem>
+            <SelectItem value="mei">MEI</SelectItem>
+            <SelectItem value="ltda">LTDA</SelectItem>
+          </SelectContent>
+        </Select>
+
+        <Select value={statusFilter} onValueChange={setStatusFilter}>
+          <SelectTrigger className="w-full sm:w-[140px] h-9">
+            <SelectValue placeholder="Status" />
+          </SelectTrigger>
+          <SelectContent>
+            <SelectItem value="all">Todos Status</SelectItem>
+            <SelectItem value="draft">Rascunho</SelectItem>
+            <SelectItem value="pending">Pendente</SelectItem>
+            <SelectItem value="under_review">Em análise</SelectItem>
+            <SelectItem value="approved">Aprovado</SelectItem>
+          </SelectContent>
+        </Select>
+
+        {(startDate || endDate || statusFilter !== 'all' || typeFilter !== 'all') && (
+          <Button
+            variant="ghost"
+            size="sm"
+            onClick={handleClearFilters}
+            className="text-xs w-full sm:w-auto"
+          >
+            <X className="h-3.5 w-3.5 mr-1" /> Limpar Filtros
+          </Button>
+        )}
       </div>
 
       <Card>
         <CardHeader className="flex flex-row items-center justify-between pb-4">
-          <CardTitle>Todos os Processos ({filtered.length})</CardTitle>
+          <CardTitle>Resultados ({filtered.length})</CardTitle>
           <Button
             variant="ghost"
             size="sm"
