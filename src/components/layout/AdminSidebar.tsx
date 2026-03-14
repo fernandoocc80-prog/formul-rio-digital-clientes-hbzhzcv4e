@@ -1,5 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import { LayoutDashboard, FileText, ShieldCheck, History, PlusCircle } from 'lucide-react'
+import { LayoutDashboard, FileText, ShieldCheck, History, PlusCircle, Settings } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -22,12 +22,14 @@ export function AdminSidebar() {
     { title: 'Todos Processos', icon: FileText, path: '/admin' },
     { title: 'Usuários', icon: ShieldCheck, path: '/admin/users' },
     { title: 'Histórico de Acesso', icon: History, path: '/admin/access-history' },
+    { title: 'Configurações', icon: Settings, path: '/settings' },
   ]
 
   const colaboradorItems = [
     { title: 'Início', icon: LayoutDashboard, path: '/colaborador' },
     { title: 'Novo Formulário', icon: PlusCircle, path: '/form/new' },
     { title: 'Histórico de Retornos', icon: History, path: '/colaborador?tab=returns' },
+    { title: 'Configurações', icon: Settings, path: '/settings' },
   ]
 
   const menuItems = role === 'colaborador' ? colaboradorItems : adminItems

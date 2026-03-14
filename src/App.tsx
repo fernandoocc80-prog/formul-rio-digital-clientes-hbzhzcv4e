@@ -21,6 +21,8 @@ import ShortLinkRedirect from './pages/form/ShortLinkRedirect'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
 import ColaboradorHome from './pages/ColaboradorHome'
+import Welcome from './pages/Welcome'
+import Settings from './pages/settings/Settings'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
@@ -41,7 +43,11 @@ const App = () => (
 
           {/* Protected Administrative Routes */}
           <Route element={<ProtectedRoute />}>
+            <Route path="/welcome" element={<Welcome />} />
+
             <Route element={<AdminLayout />}>
+              <Route path="/settings" element={<Settings />} />
+
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
                 <Route path="/" element={<Index />} />
                 <Route path="/admin" element={<SubmissionsList />} />

@@ -7,13 +7,15 @@ import React, {
   useCallback,
   useRef,
 } from 'react'
-import { Submission, AdminUser, AccessLog } from '@/types'
+import { Submission, AdminUser, AccessLog, ActiveSession } from '@/types'
 
 const MOCK_REMOTE_DB_KEY = 'empresaflow_remote_db_v5'
 const EMAIL_TEMPLATE_KEY = 'empresaflow_email_template'
 const USERS_STORAGE_KEY = 'empresaflow_users_v1'
 const CURRENT_USER_KEY = 'empresaflow_current_user_v1'
 const ACCESS_LOGS_KEY = 'empresaflow_access_logs_v1'
+const SESSIONS_STORAGE_KEY = 'empresaflow_sessions_v1'
+const CURRENT_SESSION_KEY = 'empresaflow_current_session_id_v1'
 
 if (typeof window !== 'undefined') {
   try {
@@ -44,6 +46,8 @@ interface AppState {
   users: AdminUser[]
   currentUser: AdminUser | null
   accessLogs: AccessLog[]
+  sessions: ActiveSession[]
+  currentSessionId: string | null
   addSubmission: (sub: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => string
   updateSubmission: (id: string, data: Partial<Submission>) => Promise<void>
   getSubmission: (id: string) => Submission | undefined
@@ -53,7 +57,11 @@ interface AppState {
     background?: boolean
     skipCache?: boolean
   }) => Promise<void>
-  login: (email: string, passwordHash: string) => Promise<AdminUser | null>
+  login: (
+    email: string,
+    passwordHash: string,
+  ) => Promise<{ success: boolean; requires2FA?: boolean; user?: AdminUser | null }>
+  verify2FA: (email: string, code: string) => Promise<{ success: boolean; user?: AdminUser | null }>
   logout: () => void
   registerUser: (
     name: string,
@@ -63,6 +71,9 @@ interface AppState {
   ) => void
   removeUser: (id: string) => void
   clearCache: () => void
+  changePassword: (currentPass: string, newPass: string) => boolean
+  toggle2FA: (enabled: boolean) => void
+  disconnectSession: (sessionId: string) => void
 }
 
 const mockData: Submission[] = []
@@ -172,6 +183,16 @@ const getAccessLogsDB = (): AccessLog[] => {
   return []
 }
 
+const getSessionsDB = (): ActiveSession[] => {
+  try {
+    const saved = localStorage.getItem(SESSIONS_STORAGE_KEY)
+    if (saved) return JSON.parse(saved)
+  } catch (e) {
+    /* ignore */
+  }
+  return []
+}
+
 const AppContext = createContext<AppState | undefined>(undefined)
 
 export const AppProvider = ({ children }: { children: ReactNode }) => {
@@ -184,6 +205,10 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [users, setUsers] = useState<AdminUser[]>(getUsersDB)
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(getCurrentUserDB)
   const [accessLogs, setAccessLogs] = useState<AccessLog[]>(getAccessLogsDB)
+  const [sessions, setSessions] = useState<ActiveSession[]>(getSessionsDB)
+  const [currentSessionId, setCurrentSessionId] = useState<string | null>(() =>
+    localStorage.getItem(CURRENT_SESSION_KEY),
+  )
 
   const [emailTemplate, setEmailTemplate] = useState(() => {
     return (
@@ -267,6 +292,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         ...data,
         id: newId,
         protocol,
+        protocol,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
       }
@@ -316,13 +342,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     [submissions],
   )
 
-  const login = useCallback(
-    async (email: string, passwordHash: string) => {
-      const normalizedEmail = email.trim().toLowerCase()
-      const user = users.find(
-        (u) => u.email.trim().toLowerCase() === normalizedEmail && u.passwordHash === passwordHash,
-      )
-
+  const completeLogin = useCallback(
+    async (user: AdminUser) => {
       const ua = navigator.userAgent
       let browser = 'Outro'
       if (ua.includes('Edg')) browser = 'Edge'
@@ -334,12 +355,12 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       const newLog: AccessLog = {
         id: `log-${Math.random().toString(36).substring(2, 9)}`,
-        userId: user ? user.id : 'unknown',
-        userEmail: normalizedEmail,
+        userId: user.id,
+        userEmail: user.email,
         timestamp: new Date().toISOString(),
         device,
         browser,
-        status: user ? 'success' : 'failed',
+        status: 'success',
       }
 
       setAccessLogs((prev) => {
@@ -348,28 +369,98 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         return logs
       })
 
-      if (user) {
-        setCurrentUser(user)
-        localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user))
-        clearCache()
-
-        try {
-          const channel = new BroadcastChannel('empresaflow_notifications')
-          channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
-          channel.close()
-        } catch (e) {
-          /* ignore */
-        }
-
-        await syncSubmissions({ force: true, background: false, skipCache: true })
-        return user
+      const newSession: ActiveSession = {
+        id: `sess-${Math.random().toString(36).substring(2, 9)}`,
+        userId: user.id,
+        device,
+        browser,
+        lastActive: new Date().toISOString(),
       }
-      return null
+
+      setSessions((prev) => {
+        const updated = [newSession, ...prev].slice(0, 20)
+        localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(updated))
+        return updated
+      })
+
+      setCurrentSessionId(newSession.id)
+      localStorage.setItem(CURRENT_SESSION_KEY, newSession.id)
+
+      setCurrentUser(user)
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(user))
+      clearCache()
+
+      try {
+        const channel = new BroadcastChannel('empresaflow_notifications')
+        channel.postMessage({ type: 'AUTH_STATE_CHANGE' })
+        channel.close()
+      } catch (e) {
+        /* ignore */
+      }
+
+      await syncSubmissions({ force: true, background: false, skipCache: true })
+      return { success: true, user }
     },
-    [users, syncSubmissions, clearCache],
+    [syncSubmissions, clearCache],
+  )
+
+  const login = useCallback(
+    async (email: string, passwordHash: string) => {
+      const normalizedEmail = email.trim().toLowerCase()
+      const user = users.find(
+        (u) => u.email.trim().toLowerCase() === normalizedEmail && u.passwordHash === passwordHash,
+      )
+
+      if (!user) {
+        const newLog: AccessLog = {
+          id: `log-${Math.random().toString(36).substring(2, 9)}`,
+          userId: 'unknown',
+          userEmail: normalizedEmail,
+          timestamp: new Date().toISOString(),
+          device: /Mobile|Android|iP(hone|od)/.test(navigator.userAgent) ? 'Mobile' : 'Desktop',
+          browser: navigator.userAgent.includes('Chrome') ? 'Chrome' : 'Outro',
+          status: 'failed',
+        }
+        setAccessLogs((prev) => {
+          const logs = [newLog, ...prev].slice(0, 500)
+          localStorage.setItem(ACCESS_LOGS_KEY, JSON.stringify(logs))
+          return logs
+        })
+        return { success: false }
+      }
+
+      if (user.twoFactorEnabled) {
+        return { success: true, requires2FA: true, user }
+      }
+
+      return await completeLogin(user)
+    },
+    [users, completeLogin],
+  )
+
+  const verify2FA = useCallback(
+    async (email: string, code: string) => {
+      const normalizedEmail = email.trim().toLowerCase()
+      const user = users.find((u) => u.email.trim().toLowerCase() === normalizedEmail)
+      if (user && code.length === 6) {
+        return await completeLogin(user)
+      }
+      return { success: false }
+    },
+    [users, completeLogin],
   )
 
   const logout = useCallback(() => {
+    if (currentSessionId) {
+      const sessionsDb = getSessionsDB()
+      const updated = sessionsDb.filter((s) => s.id !== currentSessionId)
+      setSessions(updated)
+      localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(updated))
+    }
+
+    setCurrentSessionId(null)
+    localStorage.removeItem(CURRENT_SESSION_KEY)
+
     setCurrentUser(null)
     localStorage.removeItem(CURRENT_USER_KEY)
     clearCache()
@@ -382,7 +473,53 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     } catch (e) {
       /* ignore */
     }
-  }, [clearCache])
+  }, [currentSessionId, clearCache])
+
+  const changePassword = useCallback(
+    (currentPass: string, newPass: string) => {
+      if (!currentUser) return false
+
+      const user = users.find((u) => u.id === currentUser.id)
+      if (!user || user.passwordHash !== currentPass) return false
+
+      const updatedUsers = users.map((u) =>
+        u.id === currentUser.id ? { ...u, passwordHash: newPass } : u,
+      )
+      setUsers(updatedUsers)
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers))
+
+      const updatedUser = { ...currentUser, passwordHash: newPass }
+      setCurrentUser(updatedUser)
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser))
+
+      return true
+    },
+    [currentUser, users],
+  )
+
+  const toggle2FA = useCallback(
+    (enabled: boolean) => {
+      if (!currentUser) return
+      const updatedUsers = users.map((u) =>
+        u.id === currentUser.id ? { ...u, twoFactorEnabled: enabled } : u,
+      )
+      setUsers(updatedUsers)
+      localStorage.setItem(USERS_STORAGE_KEY, JSON.stringify(updatedUsers))
+
+      const updatedUser = { ...currentUser, twoFactorEnabled: enabled }
+      setCurrentUser(updatedUser)
+      localStorage.setItem(CURRENT_USER_KEY, JSON.stringify(updatedUser))
+    },
+    [currentUser, users],
+  )
+
+  const disconnectSession = useCallback((sessionId: string) => {
+    setSessions((prev) => {
+      const updated = prev.filter((s) => s.id !== sessionId)
+      localStorage.setItem(SESSIONS_STORAGE_KEY, JSON.stringify(updated))
+      return updated
+    })
+  }, [])
 
   const registerUser = useCallback(
     (
@@ -434,6 +571,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (e.key === CURRENT_USER_KEY) setCurrentUser(getCurrentUserDB())
       if (e.key === USERS_STORAGE_KEY) setUsers(getUsersDB())
       if (e.key === ACCESS_LOGS_KEY) setAccessLogs(getAccessLogsDB())
+      if (e.key === SESSIONS_STORAGE_KEY) setSessions(getSessionsDB())
       if (e.key === EMAIL_TEMPLATE_KEY)
         setEmailTemplate(localStorage.getItem(EMAIL_TEMPLATE_KEY) || '')
       if (e.key === MOCK_REMOTE_DB_KEY)
@@ -448,6 +586,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
           syncSubmissions({ force: true, background: true, skipCache: true })
         } else if (event.data?.type === 'AUTH_STATE_CHANGE') {
           setCurrentUser(getCurrentUserDB())
+          setSessions(getSessionsDB())
         } else if (event.data?.type === 'USERS_STATE_CHANGE') {
           setUsers(getUsersDB())
         }
@@ -462,6 +601,15 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       if (channel) channel.close()
     }
   }, [syncSubmissions])
+
+  useEffect(() => {
+    if (currentUser && currentSessionId) {
+      const sessionExists = sessions.some((s) => s.id === currentSessionId)
+      if (!sessionExists) {
+        logout()
+      }
+    }
+  }, [sessions, currentSessionId, currentUser, logout])
 
   useEffect(() => {
     syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
@@ -497,16 +645,22 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         users,
         currentUser,
         accessLogs,
+        sessions,
+        currentSessionId,
         addSubmission,
         updateSubmission,
         getSubmission,
         updateEmailTemplate,
         syncSubmissions,
         login,
+        verify2FA,
         logout,
         registerUser,
         removeUser,
         clearCache,
+        changePassword,
+        toggle2FA,
+        disconnectSession,
       }}
     >
       {children}

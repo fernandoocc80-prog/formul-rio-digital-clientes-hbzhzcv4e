@@ -59,6 +59,7 @@ export interface AdminUser {
   passwordHash: string
   role?: 'admin' | 'colaborador'
   createdAt: string
+  twoFactorEnabled?: boolean
 }
 
 export interface AccessLog {
@@ -69,4 +70,12 @@ export interface AccessLog {
   device: string
   browser: string
   status: 'success' | 'failed'
+}
+
+export interface ActiveSession {
+  id: string
+  userId: string
+  device: string
+  browser: string
+  lastActive: string
 }

@@ -112,17 +112,12 @@ export function AppNavbar() {
                     </div>
                   </DropdownMenuLabel>
                   <DropdownMenuSeparator />
-                  {role === 'admin' && (
-                    <DropdownMenuItem asChild>
-                      <Link
-                        to="/admin/settings"
-                        className="w-full cursor-pointer flex items-center"
-                      >
-                        <Settings className="mr-2 h-4 w-4" />
-                        <span>Configurações</span>
-                      </Link>
-                    </DropdownMenuItem>
-                  )}
+                  <DropdownMenuItem asChild>
+                    <Link to="/settings" className="w-full cursor-pointer flex items-center">
+                      <Settings className="mr-2 h-4 w-4" />
+                      <span>Configurações</span>
+                    </Link>
+                  </DropdownMenuItem>
                   <DropdownMenuItem
                     onClick={handleLogout}
                     className="cursor-pointer text-red-600 focus:text-red-600 focus:bg-red-50"
