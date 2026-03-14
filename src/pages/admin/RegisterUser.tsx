@@ -82,7 +82,7 @@ export default function RegisterUser() {
               <Button type="button" variant="outline" onClick={() => navigate(-1)}>
                 Cancelar
               </Button>
-              <Button type="submit" className="bg-blue-600 hover:bg-blue-700">
+              <Button type="submit" className="bg-blue-600 hover:bg-blue-700 text-white">
                 <UserPlus className="h-4 w-4 mr-2" />
                 Cadastrar Usuário
               </Button>

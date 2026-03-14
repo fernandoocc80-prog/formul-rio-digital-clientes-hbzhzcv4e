@@ -60,7 +60,7 @@ export default function Login() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700">
+            <Button type="submit" className="w-full bg-blue-600 hover:bg-blue-700 text-white">
               Entrar
             </Button>
           </form>
