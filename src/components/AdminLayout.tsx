@@ -1,5 +1,5 @@
 import { useEffect, useCallback } from 'react'
-import { Outlet, useNavigate } from 'react-router-dom'
+import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AdminSidebar } from './layout/AdminSidebar'
 import { useToast } from '@/hooks/use-toast'
@@ -9,8 +9,16 @@ import { LogOut } from 'lucide-react'
 
 export default function AdminLayout() {
   const { toast } = useToast()
-  const { currentUser, logout } = useAppStore()
+  const { currentUser, logout, syncSubmissions } = useAppStore()
   const navigate = useNavigate()
+  const location = useLocation()
+
+  // Feature: Session Consistency - Navigating between different routes triggers data verification
+  useEffect(() => {
+    if (currentUser) {
+      syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
+    }
+  }, [location.pathname, currentUser, syncSubmissions])
 
   const playAlertSound = useCallback(() => {
     try {

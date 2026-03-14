@@ -31,7 +31,7 @@ export function SyncIndicator() {
             'flex items-center gap-1.5 font-normal cursor-pointer transition-colors select-none',
             syncStatus !== 'error' && 'hover:bg-muted/80',
           )}
-          onClick={() => syncSubmissions({ force: true })}
+          onClick={() => syncSubmissions({ force: true, skipCache: true })}
         >
           {syncStatus === 'syncing' ? (
             <RefreshCw className="h-3 w-3 animate-spin" />

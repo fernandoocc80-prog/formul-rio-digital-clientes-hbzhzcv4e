@@ -125,7 +125,7 @@ export default function SubmissionsList() {
         <div className="space-y-2">
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Gestão de Formulários</h1>
-            {/* Visual Accuracy: Ensure the total list items identically match dashboard summary counters */}
+            {/* Visual Parity Confirmation */}
             <Badge variant="outline" className="bg-white dark:bg-slate-950 font-mono text-sm px-2">
               Total: {submissions.length} Processo{submissions.length !== 1 && 's'}
             </Badge>
@@ -181,7 +181,7 @@ export default function SubmissionsList() {
             variant="ghost"
             size="sm"
             className="sm:hidden -mr-2"
-            onClick={() => syncSubmissions({ force: true })}
+            onClick={() => syncSubmissions({ force: true, skipCache: true })}
             disabled={syncStatus === 'syncing'}
           >
             <RefreshCw className={cn('h-4 w-4', syncStatus === 'syncing' && 'animate-spin')} />

@@ -30,7 +30,7 @@ export default function Register() {
     }
   }, [users, navigate, toast])
 
-  const handleRegister = (e: React.FormEvent) => {
+  const handleRegister = async (e: React.FormEvent) => {
     e.preventDefault()
     if (password !== confirmPassword) {
       toast({ title: 'Senhas não conferem', variant: 'destructive' })
@@ -38,7 +38,7 @@ export default function Register() {
     }
     registerUser(name, email, password)
     toast({ title: 'Conta criada com sucesso!' })
-    login(email, password)
+    await login(email, password)
     navigate('/')
   }
 

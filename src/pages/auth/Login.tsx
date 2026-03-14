@@ -15,9 +15,11 @@ export default function Login() {
   const navigate = useNavigate()
   const { toast } = useToast()
 
-  const handleLogin = (e: React.FormEvent) => {
+  const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
-    if (login(email, password)) {
+    // Data Integrity on Login check happens inside the login context function
+    const success = await login(email, password)
+    if (success) {
       toast({ title: 'Login realizado com sucesso!' })
       navigate('/')
     } else {
