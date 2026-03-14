@@ -46,20 +46,22 @@ const App = () => (
             <Route path="/welcome" element={<Welcome />} />
 
             <Route element={<AdminLayout />}>
+              {/* Rotas unificadas e compartilhadas entre Administrador e Colaborador */}
+              <Route path="/" element={<Index />} />
+              <Route path="/admin" element={<SubmissionsList />} />
+              <Route path="/admin/:id" element={<SubmissionDetail />} />
               <Route path="/settings" element={<Settings />} />
 
+              {/* Rotas restritas apenas para Administrador */}
               <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route path="/" element={<Index />} />
-                <Route path="/admin" element={<SubmissionsList />} />
                 <Route path="/admin/users" element={<UsersList />} />
                 <Route path="/admin/register-user" element={<RegisterUser />} />
                 <Route path="/admin/access-history" element={<AccessHistory />} />
-                <Route path="/admin/:id" element={<SubmissionDetail />} />
               </Route>
 
+              {/* Rotas restritas apenas para Colaborador (Atalhos/Ações Rápidas) */}
               <Route element={<ProtectedRoute allowedRoles={['colaborador']} />}>
                 <Route path="/colaborador" element={<ColaboradorHome />} />
-                <Route path="/colaborador/:id" element={<SubmissionDetail />} />
               </Route>
             </Route>
           </Route>

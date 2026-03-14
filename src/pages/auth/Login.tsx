@@ -55,9 +55,7 @@ export default function Login() {
           description: `Sessão iniciada como ${res.user.role === 'colaborador' ? 'Colaborador' : 'Administrador'}.`,
         })
 
-        const userRole = res.user.role || 'admin'
-        const dest = userRole === 'colaborador' && from === '/' ? '/colaborador' : from
-        navigate('/welcome', { replace: true, state: { from: dest } })
+        navigate('/welcome', { replace: true, state: { from } })
       } else {
         setErrorMsg('Credenciais inválidas. Verifique seu e-mail e senha e tente novamente.')
         toast({
@@ -92,9 +90,7 @@ export default function Login() {
           title: `Bem-vindo(a), ${res.user.name}!`,
           description: `Sessão iniciada com segurança reforçada.`,
         })
-        const userRole = res.user.role || 'admin'
-        const dest = userRole === 'colaborador' && from === '/' ? '/colaborador' : from
-        navigate('/welcome', { replace: true, state: { from: dest } })
+        navigate('/welcome', { replace: true, state: { from } })
       } else {
         setErrorMsg('Token inválido ou expirado.')
       }

@@ -16,7 +16,8 @@ export default function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
   const role = currentUser.role || 'admin'
 
   if (allowedRoles && !allowedRoles.includes(role)) {
-    return <Navigate to={role === 'colaborador' ? '/colaborador' : '/'} replace />
+    // Redirecionamento unificado para o dashboard global (home) em caso de acesso restrito
+    return <Navigate to="/" replace />
   }
 
   return <Outlet />

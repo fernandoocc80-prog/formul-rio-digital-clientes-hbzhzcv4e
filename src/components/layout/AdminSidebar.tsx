@@ -19,16 +19,16 @@ export function AdminSidebar() {
 
   const adminItems = [
     { title: 'Dashboard', icon: LayoutDashboard, path: '/' },
-    { title: 'Todos Processos', icon: FileText, path: '/admin' },
+    { title: 'Todas Submissões', icon: FileText, path: '/admin' },
     { title: 'Usuários', icon: ShieldCheck, path: '/admin/users' },
     { title: 'Histórico de Acesso', icon: History, path: '/admin/access-history' },
     { title: 'Configurações', icon: Settings, path: '/settings' },
   ]
 
   const colaboradorItems = [
-    { title: 'Início', icon: LayoutDashboard, path: '/colaborador' },
-    { title: 'Novo Formulário', icon: PlusCircle, path: '/form/new' },
-    { title: 'Histórico de Retornos', icon: History, path: '/colaborador?tab=returns' },
+    { title: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { title: 'Todas Submissões', icon: FileText, path: '/admin' },
+    { title: 'Ações Rápidas', icon: PlusCircle, path: '/colaborador' },
     { title: 'Configurações', icon: Settings, path: '/settings' },
   ]
 

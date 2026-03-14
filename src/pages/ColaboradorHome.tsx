@@ -163,7 +163,7 @@ export default function ColaboradorHome() {
                         </TableCell>
                         <TableCell className="text-right">
                           <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/colaborador/${sub.id}`}>
+                            <Link to={`/admin/${sub.id}`}>
                               <Eye className="w-4 h-4 sm:mr-2" />
                               <span className="hidden sm:inline">Visualizar</span>
                             </Link>

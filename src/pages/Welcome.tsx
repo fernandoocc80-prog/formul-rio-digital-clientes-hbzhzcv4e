@@ -11,7 +11,7 @@ export default function Welcome() {
   const [showButton, setShowButton] = useState(false)
   const [progressWidth, setProgressWidth] = useState(0)
 
-  const from = location.state?.from || (currentUser?.role === 'colaborador' ? '/colaborador' : '/')
+  const from = location.state?.from || '/'
 
   useEffect(() => {
     // Start progress bar animation
