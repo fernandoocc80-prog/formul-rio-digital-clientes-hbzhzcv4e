@@ -203,18 +203,25 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     localStorage.setItem(EMAIL_TEMPLATE_KEY, emailTemplate)
   }, [emailTemplate])
 
+  // Subscriptions and Real-Time Fetching
   useEffect(() => {
+    // Feature: Route Protection & Sync - Only sync when valid admin user is logged in
+    if (!currentUser) return
+
     syncSubmissions({ force: true })
 
+    // Feature: Real-Time Updates within 2 seconds
     const intervalId = setInterval(() => {
       syncSubmissions()
-    }, 5000)
+    }, 2000)
 
+    // Feature: Window Focus Revalidation
     const handleFocus = () => syncSubmissions({ force: true })
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible') syncSubmissions({ force: true })
     }
 
+    // Storage event ensures cross-tab synchronization immediately
     const handleStorageChange = (e: StorageEvent) => {
       if (e.key === LOCAL_STORAGE_KEY) {
         syncSubmissions({ force: true })
@@ -237,6 +244,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     document.addEventListener('visibilitychange', handleVisibilityChange)
     window.addEventListener('storage', handleStorageChange)
 
+    // Ensure listeners are cleaned up when user logs out or closes app
     return () => {
       clearInterval(intervalId)
       window.removeEventListener('focus', handleFocus)
@@ -244,7 +252,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       window.removeEventListener('storage', handleStorageChange)
       if (channel) channel.close()
     }
-  }, [syncSubmissions])
+  }, [syncSubmissions, currentUser])
 
   const addSubmission = (data: Omit<Submission, 'id' | 'createdAt' | 'updatedAt' | 'protocol'>) => {
     const newId = `sub-${Math.random().toString(36).substring(2, 9)}`
@@ -267,7 +275,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     const currentDB = getDB()
     const updatedDB = [newSubmission, ...currentDB]
 
+    // Feature: Global State Integrity - Update instantly in current context
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
+    setSubmissions(updatedDB)
 
     try {
       const channel = new BroadcastChannel('empresaflow_notifications')
@@ -277,9 +287,11 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // Ignored if BroadcastChannel is not supported by environment
     }
 
-    syncSubmissions({ force: true }).catch(() => {
-      // Ignored explicit sync failure
-    })
+    if (currentUser) {
+      syncSubmissions({ force: true }).catch(() => {
+        // Ignored explicit sync failure
+      })
+    }
     return newId
   }
 
@@ -289,7 +301,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       s.id === id ? { ...s, ...data, updatedAt: new Date().toISOString() } : s,
     )
 
+    // Feature: Global State Integrity - Update instantly in current context
     localStorage.setItem(LOCAL_STORAGE_KEY, JSON.stringify(updatedDB))
+    setSubmissions(updatedDB)
 
     try {
       const channel = new BroadcastChannel('empresaflow_notifications')
@@ -299,7 +313,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       // Ignored if BroadcastChannel is not supported by environment
     }
 
-    await syncSubmissions({ force: true })
+    if (currentUser) {
+      await syncSubmissions({ force: true })
+    }
   }
 
   const getSubmission = (id: string) => submissions.find((s) => s.id === id)
