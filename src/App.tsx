@@ -21,6 +21,8 @@ import FormSuccess from './pages/form/FormSuccess'
 import ShortLinkRedirect from './pages/form/ShortLinkRedirect'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
+import ForgotPassword from './pages/auth/ForgotPassword'
+import ResetPassword from './pages/auth/ResetPassword'
 import QuickActions from './pages/QuickActions'
 import Welcome from './pages/Welcome'
 import Settings from './pages/settings/Settings'
@@ -35,6 +37,8 @@ const App = () => (
           <Routes>
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
+            <Route path="/forgot-password" element={<ForgotPassword />} />
+            <Route path="/reset-password" element={<ResetPassword />} />
 
             <Route element={<Layout />}>
               <Route path="/form/:id" element={<ClientForm />} />
