@@ -11,7 +11,17 @@ import {
   TableHeader,
   TableRow,
 } from '@/components/ui/table'
-import { ClipboardList, ExternalLink, Loader2, BarChart2 } from 'lucide-react'
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+} from '@/components/ui/alert-dialog'
+import { ClipboardList, ExternalLink, Loader2, BarChart2, Trash2 } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 
 interface FormRecord {
@@ -24,6 +34,8 @@ interface FormRecord {
 export default function FormsList() {
   const [forms, setForms] = useState<FormRecord[]>([])
   const [loading, setLoading] = useState(true)
+  const [formToDelete, setFormToDelete] = useState<string | null>(null)
+  const [isDeleting, setIsDeleting] = useState(false)
   const { toast } = useToast()
 
   useEffect(() => {
@@ -50,6 +62,31 @@ export default function FormsList() {
 
     fetchForms()
   }, [toast])
+
+  const handleDelete = async () => {
+    if (!formToDelete) return
+    setIsDeleting(true)
+    try {
+      const { error } = await supabase.from('forms').delete().eq('id', formToDelete)
+      if (error) throw error
+
+      setForms(forms.filter((f) => f.id !== formToDelete))
+      toast({
+        title: 'Formulário removido',
+        description: 'O formulário foi removido com sucesso.',
+      })
+    } catch (err) {
+      console.error('Error deleting form:', err)
+      toast({
+        title: 'Erro ao remover',
+        description: 'Não foi possível remover o formulário.',
+        variant: 'destructive',
+      })
+    } finally {
+      setIsDeleting(false)
+      setFormToDelete(null)
+    }
+  }
 
   return (
     <div className="space-y-6 max-w-5xl mx-auto animate-fade-in">
@@ -114,6 +151,15 @@ export default function FormsList() {
                             Respostas
                           </Link>
                         </Button>
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          className="text-destructive hover:text-destructive hover:bg-destructive/10"
+                          onClick={() => setFormToDelete(form.id)}
+                          title="Remover formulário"
+                        >
+                          <Trash2 className="h-4 w-4" />
+                        </Button>
                       </div>
                     </TableCell>
                   </TableRow>
@@ -123,6 +169,34 @@ export default function FormsList() {
           )}
         </CardContent>
       </Card>
+
+      <AlertDialog
+        open={!!formToDelete}
+        onOpenChange={(open) => !open && !isDeleting && setFormToDelete(null)}
+      >
+        <AlertDialogContent>
+          <AlertDialogHeader>
+            <AlertDialogTitle>Remover Formulário</AlertDialogTitle>
+            <AlertDialogDescription>
+              Tem certeza que deseja remover este formulário? Esta ação não pode ser desfeita.
+            </AlertDialogDescription>
+          </AlertDialogHeader>
+          <AlertDialogFooter>
+            <AlertDialogCancel disabled={isDeleting}>Cancelar</AlertDialogCancel>
+            <AlertDialogAction
+              onClick={(e) => {
+                e.preventDefault()
+                handleDelete()
+              }}
+              disabled={isDeleting}
+              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+            >
+              {isDeleting && <Loader2 className="h-4 w-4 animate-spin mr-2" />}
+              Remover
+            </AlertDialogAction>
+          </AlertDialogFooter>
+        </AlertDialogContent>
+      </AlertDialog>
     </div>
   )
 }
