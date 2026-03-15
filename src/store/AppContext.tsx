@@ -201,6 +201,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const [syncError, setSyncError] = useState<string | null>(null)
   const [lastSyncAt, setLastSyncAt] = useState<Date | null>(null)
   const syncInProgress = useRef(false)
+  const initialLoadDone = useRef(false)
 
   const [users, setUsers] = useState<AdminUser[]>(getUsersDB)
   const [currentUser, setCurrentUser] = useState<AdminUser | null>(getCurrentUserDB)
@@ -252,7 +253,18 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       try {
         if (options?.skipCache) clearCache()
         const serverData = await fetchFromServerMock()
-        setSubmissions([...serverData])
+
+        setSubmissions((prev) => {
+          if (initialLoadDone.current && prev.length > 0) {
+            const newSubs = serverData.filter((s) => !prev.some((p) => p.id === s.id))
+            newSubs.forEach((sub) => {
+              window.dispatchEvent(new CustomEvent('empresaflow_new_submission', { detail: sub }))
+            })
+          }
+          return [...serverData]
+        })
+
+        initialLoadDone.current = true
         setLastSyncAt(new Date())
 
         setSyncStatus((prev) =>
@@ -291,7 +303,6 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const newSubmission: Submission = {
         ...data,
         id: newId,
-        protocol,
         protocol,
         createdAt: now.toISOString(),
         updatedAt: now.toISOString(),
@@ -465,6 +476,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
     localStorage.removeItem(CURRENT_USER_KEY)
     clearCache()
     setSubmissions([])
+    initialLoadDone.current = false
 
     try {
       const channel = new BroadcastChannel('empresaflow_notifications')
@@ -617,7 +629,7 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   useEffect(() => {
     if (!currentUser) return
-    const intervalId = setInterval(() => syncSubmissions({ background: true }), 2000)
+    const intervalId = setInterval(() => syncSubmissions({ background: true }), 3000)
     const handleFocus = () => syncSubmissions({ force: true, background: true, skipCache: true })
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible')

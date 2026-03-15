@@ -1,4 +1,4 @@
-import { useEffect, useCallback } from 'react'
+import { useEffect, useCallback, useRef } from 'react'
 import { Outlet, useNavigate, useLocation } from 'react-router-dom'
 import { SidebarProvider, SidebarTrigger } from '@/components/ui/sidebar'
 import { AdminSidebar } from './layout/AdminSidebar'
@@ -12,6 +12,8 @@ export default function AdminLayout() {
   const { currentUser, logout, syncSubmissions, clearCache } = useAppStore()
   const navigate = useNavigate()
   const location = useLocation()
+
+  const notifiedSet = useRef(new Set<string>())
 
   useEffect(() => {
     if (currentUser) {
@@ -46,28 +48,45 @@ export default function AdminLayout() {
     }
   }, [])
 
+  const notifyNewSubmission = useCallback(
+    (sub: any) => {
+      if (notifiedSet.current.has(sub.id)) return
+      notifiedSet.current.add(sub.id)
+      playAlertSound()
+      toast({
+        title: '🔔 Nova submissão recebida',
+        description: `Formulário de ${sub.clientName || 'Cliente'} recebido com sucesso. (Protocolo: ${sub.protocol})`,
+        duration: 8000,
+      })
+    },
+    [playAlertSound, toast],
+  )
+
   useEffect(() => {
     let channel: BroadcastChannel | null = null
     try {
       channel = new BroadcastChannel('empresaflow_notifications')
       channel.onmessage = (event) => {
         if (event.data?.type === 'NEW_SUBMISSION') {
-          playAlertSound()
-          toast({
-            title: '🔔 Nova submissão recebida',
-            description: `Formulário de ${event.data.data.clientName} recebido com sucesso. (Protocolo: ${event.data.data.protocol})`,
-            duration: 8000,
-          })
+          notifyNewSubmission(event.data.data)
         }
       }
     } catch (e) {
       console.warn('BroadcastChannel not supported', e)
     }
 
+    const handleCustomEvent = (e: Event) => {
+      const customEvent = e as CustomEvent
+      notifyNewSubmission(customEvent.detail)
+    }
+
+    window.addEventListener('empresaflow_new_submission', handleCustomEvent)
+
     return () => {
       if (channel) channel.close()
+      window.removeEventListener('empresaflow_new_submission', handleCustomEvent)
     }
-  }, [toast, playAlertSound])
+  }, [notifyNewSubmission])
 
   const handleLogout = () => {
     logout()
