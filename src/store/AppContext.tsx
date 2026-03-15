@@ -271,6 +271,14 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
   const downloadGeneratedPDF = useCallback(async (sub: Submission) => {
     try {
+      const {
+        data: { session },
+      } = await supabase.auth.getSession()
+      if (!session) {
+        window.location.href = '/login'
+        return
+      }
+
       const { data } = await supabase
         .from('generated_documents')
         .select('file_path')
@@ -278,12 +286,17 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         .order('created_at', { ascending: false })
         .limit(1)
         .single()
+
       if (data) {
-        const { data: fileData, error } = await supabase.storage
+        const { data: signedData, error } = await supabase.storage
           .from('documents')
-          .download(data.file_path)
-        if (fileData && !error) {
-          const url = URL.createObjectURL(fileData)
+          .createSignedUrl(data.file_path, 3600)
+
+        if (signedData?.signedUrl && !error) {
+          const res = await fetch(signedData.signedUrl)
+          if (!res.ok) throw new Error('Failed to fetch from signed URL')
+          const blob = await res.blob()
+          const url = URL.createObjectURL(blob)
           const link = document.createElement('a')
           link.href = url
           link.download = `Protocolo_${sub.protocol}.pdf`

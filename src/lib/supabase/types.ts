@@ -81,6 +81,7 @@ export type Database = {
           schema: Json | null
           settings: Json | null
           title: string
+          user_id: string | null
         }
         Insert: {
           created_at?: string
@@ -89,6 +90,7 @@ export type Database = {
           schema?: Json | null
           settings?: Json | null
           title: string
+          user_id?: string | null
         }
         Update: {
           created_at?: string
@@ -97,6 +99,7 @@ export type Database = {
           schema?: Json | null
           settings?: Json | null
           title?: string
+          user_id?: string | null
         }
         Relationships: []
       }
@@ -319,6 +322,7 @@ export const Constants = {
 //   created_at: timestamp with time zone (not null, default: now())
 //   schema: jsonb (nullable)
 //   settings: jsonb (nullable)
+//   user_id: uuid (nullable)
 // Table: generated_documents
 //   id: uuid (not null, default: gen_random_uuid())
 //   submission_id: uuid (nullable)
@@ -342,6 +346,7 @@ export const Constants = {
 //   PRIMARY KEY form_submissions_pkey: PRIMARY KEY (id)
 // Table: forms
 //   PRIMARY KEY forms_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY forms_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id)
 // Table: generated_documents
 //   PRIMARY KEY generated_documents_pkey: PRIMARY KEY (id)
 //   FOREIGN KEY generated_documents_submission_id_fkey: FOREIGN KEY (submission_id) REFERENCES form_submissions(id) ON DELETE CASCADE
