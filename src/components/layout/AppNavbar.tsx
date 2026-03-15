@@ -20,15 +20,12 @@ export function AppNavbar() {
   const { currentUser, logout } = useAppStore()
   const [isMobileMenuOpen, setIsMobileMenuOpen] = useState(false)
 
-  const role = currentUser?.role || 'admin'
-
   const navLinks = currentUser
-    ? role === 'admin'
-      ? [
-          { name: 'Dashboard', path: '/' },
-          { name: 'Gestão', path: '/admin' },
-        ]
-      : [{ name: 'Início', path: '/colaborador' }]
+    ? [
+        { name: 'Dashboard', path: '/' },
+        { name: 'Ações Rápidas', path: '/acoes-rapidas' },
+        { name: 'Gestão', path: '/admin' },
+      ]
     : []
 
   const handleLogout = () => {

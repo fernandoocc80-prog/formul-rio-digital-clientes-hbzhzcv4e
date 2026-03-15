@@ -20,7 +20,7 @@ import FormSuccess from './pages/form/FormSuccess'
 import ShortLinkRedirect from './pages/form/ShortLinkRedirect'
 import Login from './pages/auth/Login'
 import Register from './pages/auth/Register'
-import ColaboradorHome from './pages/ColaboradorHome'
+import QuickActions from './pages/QuickActions'
 import Welcome from './pages/Welcome'
 import Settings from './pages/settings/Settings'
 
@@ -48,6 +48,7 @@ const App = () => (
             <Route element={<AdminLayout />}>
               {/* Rotas unificadas e compartilhadas entre Administrador e Colaborador */}
               <Route path="/" element={<Index />} />
+              <Route path="/acoes-rapidas" element={<QuickActions />} />
               <Route path="/admin" element={<SubmissionsList />} />
               <Route path="/admin/:id" element={<SubmissionDetail />} />
               <Route path="/settings" element={<Settings />} />
@@ -57,11 +58,6 @@ const App = () => (
                 <Route path="/admin/users" element={<UsersList />} />
                 <Route path="/admin/register-user" element={<RegisterUser />} />
                 <Route path="/admin/access-history" element={<AccessHistory />} />
-              </Route>
-
-              {/* Rotas restritas apenas para Colaborador (Atalhos/Ações Rápidas) */}
-              <Route element={<ProtectedRoute allowedRoles={['colaborador']} />}>
-                <Route path="/colaborador" element={<ColaboradorHome />} />
               </Route>
             </Route>
           </Route>

@@ -19,6 +19,7 @@ export function AdminSidebar() {
 
   const adminItems = [
     { title: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { title: 'Ações Rápidas', icon: PlusCircle, path: '/acoes-rapidas' },
     { title: 'Todas Submissões', icon: FileText, path: '/admin' },
     { title: 'Usuários', icon: ShieldCheck, path: '/admin/users' },
     { title: 'Histórico de Acesso', icon: History, path: '/admin/access-history' },
@@ -27,8 +28,8 @@ export function AdminSidebar() {
 
   const colaboradorItems = [
     { title: 'Dashboard', icon: LayoutDashboard, path: '/' },
+    { title: 'Ações Rápidas', icon: PlusCircle, path: '/acoes-rapidas' },
     { title: 'Todas Submissões', icon: FileText, path: '/admin' },
-    { title: 'Ações Rápidas', icon: PlusCircle, path: '/colaborador' },
     { title: 'Configurações', icon: Settings, path: '/settings' },
   ]
 
@@ -36,7 +37,8 @@ export function AdminSidebar() {
 
   const getIsActive = (path: string) => {
     const currentPathWithSearch = location.pathname + location.search
-    if (path === '/colaborador' && currentPathWithSearch.includes('tab=')) return false
+    if (path === '/acoes-rapidas' && currentPathWithSearch.includes('tab=')) return true
+    if (path === '/acoes-rapidas' && location.pathname === '/acoes-rapidas') return true
     if (path.includes('?')) return currentPathWithSearch === path
     return location.pathname === path
   }
