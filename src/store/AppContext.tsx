@@ -208,6 +208,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
       const now = new Date()
       const protocol = `${now.getFullYear()}-${String(now.getMonth() + 1).padStart(2, '0')}-${String(now.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`
 
+      // Extract files from documents so they are not saved in the JSON column
+      const filesToUpload: { id: string; file: File; fileName: string }[] = []
+
       const payload = {
         ...data,
         protocol,
@@ -215,6 +218,19 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         updatedAt: now.toISOString(),
       }
 
+      if (payload.documents) {
+        payload.documents = payload.documents.map((doc) => {
+          if (doc.file) {
+            filesToUpload.push({ id: doc.id, file: doc.file, fileName: doc.file.name })
+            // Remove 'file' from the payload to avoid JSON stringify errors
+            const { file, ...rest } = doc
+            return rest
+          }
+          return doc
+        })
+      }
+
+      // 1. Create the submission record
       const { data: inserted, error } = await supabase
         .from('form_submissions')
         .insert({
@@ -224,11 +240,28 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         .select()
         .single()
 
-      if (error || !inserted) throw new Error('Falha ao salvar submissão')
+      if (error || !inserted) throw new Error('Falha ao salvar submissão no banco de dados')
+
+      // 2. Upload files and create generated_documents records
+      for (const item of filesToUpload) {
+        const filePath = `forms/00000000-0000-0000-0000-000000000001/${inserted.id}/${Date.now()}_${item.fileName}`
+
+        const { error: uploadError } = await supabase.storage
+          .from('documents')
+          .upload(filePath, item.file)
+
+        if (!uploadError) {
+          await supabase.from('generated_documents').insert({
+            submission_id: inserted.id,
+            file_path: filePath,
+          })
+        }
+      }
 
       const newSubmission: Submission = { id: inserted.id, ...payload }
       setSubmissions((prev) => [newSubmission, ...prev])
 
+      // 3. Trigger edge function for PDF generation
       supabase.functions
         .invoke('generate-pdf', { body: { submissionId: inserted.id } })
         .catch(() => {

@@ -34,6 +34,7 @@ export interface DocumentItem {
   label: string
   fileName?: string
   uploadedAt?: string
+  file?: File
 }
 
 export interface Submission {

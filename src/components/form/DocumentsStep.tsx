@@ -29,16 +29,20 @@ export function DocumentsStep({ documents, onChange }: Props) {
 
     onChange(
       documents.map((d) =>
-        d.id === id ? { ...d, fileName: file.name, uploadedAt: new Date().toISOString() } : d,
+        d.id === id ? { ...d, fileName: file.name, uploadedAt: new Date().toISOString(), file } : d,
       ),
     )
   }
 
   const removeDoc = (id: string) => {
     onChange(
-      documents.map((d) =>
-        d.id === id ? { ...d, fileName: undefined, uploadedAt: undefined } : d,
-      ),
+      documents.map((d) => {
+        if (d.id === id) {
+          const { fileName, uploadedAt, file, ...rest } = d
+          return rest
+        }
+        return d
+      }),
     )
   }
 
@@ -57,7 +61,7 @@ export function DocumentsStep({ documents, onChange }: Props) {
             <CardContent className="p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-4">
               <div className="flex items-center gap-3">
                 {doc.fileName ? (
-                  <CheckCircle2 className="text-success h-6 w-6 shrink-0" />
+                  <CheckCircle2 className="text-green-600 h-6 w-6 shrink-0" />
                 ) : (
                   <div className="h-6 w-6 rounded-full border-2 border-dashed border-muted-foreground shrink-0" />
                 )}

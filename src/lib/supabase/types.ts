@@ -396,6 +396,23 @@ export const Constants = {
 //   END;
 //   $function$
 //
+// FUNCTION verify_submission_exists()
+//   CREATE OR REPLACE FUNCTION public.verify_submission_exists()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//   AS $function$
+//   BEGIN
+//     IF NOT EXISTS (SELECT 1 FROM form_submissions WHERE id = NEW.submission_id) THEN
+//       RAISE EXCEPTION 'Submission ID % does not exist in form_submissions', NEW.submission_id;
+//     END IF;
+//     RETURN NEW;
+//   END;
+//   $function$
+//
+
+// --- TRIGGERS ---
+// Table: generated_documents
+//   trg_verify_submission_exists: CREATE TRIGGER trg_verify_submission_exists BEFORE INSERT OR UPDATE ON public.generated_documents FOR EACH ROW EXECUTE FUNCTION verify_submission_exists()
 
 // --- INDEXES ---
 // Table: form_drafts
