@@ -9,7 +9,109 @@ export type Database = {
   }
   public: {
     Tables: {
-      [_ in never]: never
+      form_submissions: {
+        Row: {
+          created_at: string
+          data: Json
+          form_id: string | null
+          id: string
+        }
+        Insert: {
+          created_at?: string
+          data: Json
+          form_id?: string | null
+          id?: string
+        }
+        Update: {
+          created_at?: string
+          data?: Json
+          form_id?: string | null
+          id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'form_submissions_form_id_fkey'
+            columns: ['form_id']
+            isOneToOne: false
+            referencedRelation: 'forms'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      forms: {
+        Row: {
+          created_at: string
+          description: string | null
+          id: string
+          title: string
+        }
+        Insert: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          title: string
+        }
+        Update: {
+          created_at?: string
+          description?: string | null
+          id?: string
+          title?: string
+        }
+        Relationships: []
+      }
+      generated_documents: {
+        Row: {
+          created_at: string
+          file_path: string
+          id: string
+          submission_id: string | null
+        }
+        Insert: {
+          created_at?: string
+          file_path: string
+          id?: string
+          submission_id?: string | null
+        }
+        Update: {
+          created_at?: string
+          file_path?: string
+          id?: string
+          submission_id?: string | null
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'generated_documents_submission_id_fkey'
+            columns: ['submission_id']
+            isOneToOne: false
+            referencedRelation: 'form_submissions'
+            referencedColumns: ['id']
+          },
+        ]
+      }
+      profiles: {
+        Row: {
+          created_at: string
+          email: string
+          id: string
+          name: string
+          role: string | null
+        }
+        Insert: {
+          created_at?: string
+          email: string
+          id: string
+          name: string
+          role?: string | null
+        }
+        Update: {
+          created_at?: string
+          email?: string
+          id?: string
+          name?: string
+          role?: string | null
+        }
+        Relationships: []
+      }
     }
     Views: {
       [_ in never]: never
@@ -153,3 +255,78 @@ export const Constants = {
 // IMPORTANT: The TypeScript types above map UUID, TEXT, VARCHAR all to "string".
 // Use the COLUMN TYPES section below to know the real PostgreSQL type for each column.
 // Always use the correct PostgreSQL type when writing SQL migrations.
+
+// --- COLUMN TYPES (actual PostgreSQL types) ---
+// Use this to know the real database type when writing migrations.
+// "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: form_submissions
+//   id: uuid (not null, default: gen_random_uuid())
+//   form_id: uuid (nullable)
+//   data: jsonb (not null)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: forms
+//   id: uuid (not null, default: gen_random_uuid())
+//   title: text (not null)
+//   description: text (nullable)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: generated_documents
+//   id: uuid (not null, default: gen_random_uuid())
+//   submission_id: uuid (nullable)
+//   file_path: text (not null)
+//   created_at: timestamp with time zone (not null, default: now())
+// Table: profiles
+//   id: uuid (not null)
+//   email: text (not null)
+//   name: text (not null)
+//   role: text (nullable, default: 'admin'::text)
+//   created_at: timestamp with time zone (not null, default: now())
+
+// --- CONSTRAINTS ---
+// Table: form_submissions
+//   FOREIGN KEY form_submissions_form_id_fkey: FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE SET NULL
+//   PRIMARY KEY form_submissions_pkey: PRIMARY KEY (id)
+// Table: forms
+//   PRIMARY KEY forms_pkey: PRIMARY KEY (id)
+// Table: generated_documents
+//   PRIMARY KEY generated_documents_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY generated_documents_submission_id_fkey: FOREIGN KEY (submission_id) REFERENCES form_submissions(id) ON DELETE CASCADE
+// Table: profiles
+//   FOREIGN KEY profiles_id_fkey: FOREIGN KEY (id) REFERENCES auth.users(id) ON DELETE CASCADE
+//   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
+
+// --- ROW LEVEL SECURITY POLICIES ---
+// Table: form_submissions
+//   Policy "Anyone can insert submissions" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: true
+//   Policy "Auth users can update submissions" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (auth.role() = 'authenticated'::text)
+//   Policy "Auth users can view submissions" (SELECT, PERMISSIVE) roles={public}
+//     USING: (auth.role() = 'authenticated'::text)
+// Table: forms
+//   Policy "Public can read forms" (SELECT, PERMISSIVE) roles={public}
+//     USING: true
+// Table: generated_documents
+//   Policy "Auth users can view documents" (SELECT, PERMISSIVE) roles={public}
+//     USING: (auth.role() = 'authenticated'::text)
+//   Policy "Service role can insert documents via edge function" (INSERT, PERMISSIVE) roles={public}
+//     WITH CHECK: true
+// Table: profiles
+//   Policy "Auth users can update profiles" (UPDATE, PERMISSIVE) roles={public}
+//     USING: (auth.role() = 'authenticated'::text)
+//   Policy "Auth users can view profiles" (SELECT, PERMISSIVE) roles={public}
+//     USING: (auth.role() = 'authenticated'::text)
+
+// --- DATABASE FUNCTIONS ---
+// FUNCTION handle_new_user()
+//   CREATE OR REPLACE FUNCTION public.handle_new_user()
+//    RETURNS trigger
+//    LANGUAGE plpgsql
+//    SECURITY DEFINER
+//   AS $function$
+//   BEGIN
+//     INSERT INTO public.profiles (id, email, name, role)
+//     VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'name', 'Usuário'), 'admin');
+//     RETURN NEW;
+//   END;
+//   $function$
+//
