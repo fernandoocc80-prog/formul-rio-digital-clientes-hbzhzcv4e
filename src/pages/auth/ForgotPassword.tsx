@@ -24,10 +24,19 @@ export default function ForgotPassword() {
     try {
       const { error } = await resetPassword(email.trim().toLowerCase())
       if (error) {
-        setErrorMsg(
-          error.message ||
-            'Não foi possível enviar o e-mail de recuperação. Verifique se o e-mail está correto e tente novamente.',
-        )
+        const isRateLimit =
+          error.message?.toLowerCase().includes('rate limit') || (error as any).status === 429
+
+        if (isRateLimit) {
+          setErrorMsg(
+            'Limite de envio de e-mail excedido. Por favor, aguarde alguns minutos antes de realizar uma nova tentativa.',
+          )
+        } else {
+          setErrorMsg(
+            error.message ||
+              'Não foi possível enviar o e-mail de recuperação. Verifique se o e-mail está correto e tente novamente.',
+          )
+        }
       } else {
         setIsSubmitted(true)
       }
