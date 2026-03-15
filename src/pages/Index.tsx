@@ -1,6 +1,6 @@
 import { useEffect, useMemo } from 'react'
 import { Link, useNavigate } from 'react-router-dom'
-import { PlusCircle, FileText, Activity, Clock, Share2 } from 'lucide-react'
+import { PlusCircle, Activity, Clock, Share2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { StatusChart } from '@/components/dashboard/StatusChart'
@@ -11,7 +11,7 @@ import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
 
 export default function Index() {
   const navigate = useNavigate()
-  const { submissions, syncSubmissions, currentUser } = useAppStore()
+  const { submissions, syncSubmissions } = useAppStore()
 
   useEffect(() => {
     syncSubmissions({ force: true, background: false, skipCache: true })
@@ -24,8 +24,6 @@ export default function Index() {
       return diff <= 24 * 60 * 60 * 1000
     }).length
   }, [submissions])
-
-  const activeModels = 1
 
   const handleCreateForm = () => {
     navigate('/form/new')
@@ -60,7 +58,7 @@ export default function Index() {
         </div>
       </section>
 
-      <div className="grid gap-4 md:grid-cols-3">
+      <div className="grid gap-4 md:grid-cols-2">
         <Card>
           <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
             <CardTitle className="text-sm font-medium">Total de Processos</CardTitle>
@@ -79,16 +77,6 @@ export default function Index() {
           <CardContent>
             <div className="text-2xl font-bold">{todaysActivity}</div>
             <p className="text-xs text-muted-foreground mt-1">Submissões nas últimas 24h</p>
-          </CardContent>
-        </Card>
-        <Card>
-          <CardHeader className="flex flex-row items-center justify-between pb-2 space-y-0">
-            <CardTitle className="text-sm font-medium">Modelos Ativos</CardTitle>
-            <FileText className="h-4 w-4 text-muted-foreground" />
-          </CardHeader>
-          <CardContent>
-            <div className="text-2xl font-bold">{activeModels}</div>
-            <p className="text-xs text-muted-foreground mt-1">Formulários de base ativos</p>
           </CardContent>
         </Card>
       </div>

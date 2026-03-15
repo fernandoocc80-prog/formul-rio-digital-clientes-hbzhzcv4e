@@ -16,8 +16,6 @@ import SubmissionDetail from './pages/admin/SubmissionDetail'
 import UsersList from './pages/admin/UsersList'
 import RegisterUser from './pages/admin/RegisterUser'
 import AccessHistory from './pages/admin/AccessHistory'
-import FormsList from './pages/admin/FormsList'
-import FormResponses from './pages/admin/FormResponses'
 import FormRouter from './pages/form/FormRouter'
 import FormSuccess from './pages/form/FormSuccess'
 import ShortLinkRedirect from './pages/form/ShortLinkRedirect'
@@ -54,9 +52,6 @@ const App = () => (
                 <Route path="/" element={<Index />} />
                 <Route path="/acoes-rapidas" element={<QuickActions />} />
 
-                {/* Specific exact routes first to prevent parameter capture by /admin/:id */}
-                <Route path="/admin/forms" element={<FormsList />} />
-                <Route path="/admin/forms/:id/responses" element={<FormResponses />} />
                 <Route path="/admin" element={<SubmissionsList />} />
                 <Route path="/admin/:id" element={<SubmissionDetail />} />
 

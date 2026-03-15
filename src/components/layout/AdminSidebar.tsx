@@ -1,13 +1,5 @@
 import { Link, useLocation } from 'react-router-dom'
-import {
-  LayoutDashboard,
-  FileText,
-  ShieldCheck,
-  History,
-  PlusCircle,
-  Settings,
-  ClipboardList,
-} from 'lucide-react'
+import { LayoutDashboard, FileText, ShieldCheck, History, PlusCircle, Settings } from 'lucide-react'
 import {
   Sidebar,
   SidebarContent,
@@ -28,7 +20,6 @@ export function AdminSidebar() {
   const adminItems = [
     { title: 'Dashboard', icon: LayoutDashboard, path: '/' },
     { title: 'Ações Rápidas', icon: PlusCircle, path: '/acoes-rapidas' },
-    { title: 'Formulários Dinâmicos', icon: ClipboardList, path: '/admin/forms' },
     { title: 'Todas Submissões', icon: FileText, path: '/admin' },
     { title: 'Usuários', icon: ShieldCheck, path: '/admin/users' },
     { title: 'Histórico de Acesso', icon: History, path: '/admin/access-history' },
@@ -38,7 +29,6 @@ export function AdminSidebar() {
   const colaboradorItems = [
     { title: 'Dashboard', icon: LayoutDashboard, path: '/' },
     { title: 'Ações Rápidas', icon: PlusCircle, path: '/acoes-rapidas' },
-    { title: 'Formulários Dinâmicos', icon: ClipboardList, path: '/admin/forms' },
     { title: 'Todas Submissões', icon: FileText, path: '/admin' },
     { title: 'Configurações', icon: Settings, path: '/settings' },
   ]
@@ -50,7 +40,6 @@ export function AdminSidebar() {
     if (path === '/acoes-rapidas' && currentPathWithSearch.includes('tab=')) return true
     if (path === '/acoes-rapidas' && location.pathname === '/acoes-rapidas') return true
     if (path.includes('?')) return currentPathWithSearch === path
-    if (path === '/admin/forms' && location.pathname.startsWith('/admin/forms')) return true
     return location.pathname === path
   }
 
