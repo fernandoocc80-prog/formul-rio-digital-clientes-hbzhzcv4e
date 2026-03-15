@@ -21,6 +21,7 @@ export default function ResetPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isLoading) return
     setErrorMsg(null)
 
     if (password !== confirmPassword) {
@@ -39,10 +40,26 @@ export default function ResetPassword() {
     try {
       const { error } = await updatePassword(password)
       if (error) {
-        setErrorMsg(
-          error.message ||
-            'Ocorreu um erro ao atualizar a senha. O link de recuperação pode ter expirado ou ser inválido.',
-        )
+        const isRateLimit =
+          error.message?.toLowerCase().includes('rate limit') ||
+          (error as any).status === 429 ||
+          (error as any).code === 'over_email_send_rate_limit'
+
+        if (isRateLimit) {
+          const msg =
+            'Muitas tentativas. Por favor, aguarde alguns minutos antes de tentar novamente.'
+          setErrorMsg(msg)
+          toast({
+            title: 'Muitas tentativas',
+            description: msg,
+            variant: 'destructive',
+          })
+        } else {
+          setErrorMsg(
+            error.message ||
+              'Ocorreu um erro ao atualizar a senha. O link de recuperação pode ter expirado ou ser inválido.',
+          )
+        }
       } else {
         toast({
           title: 'Senha redefinida com sucesso!',
@@ -50,8 +67,21 @@ export default function ResetPassword() {
         })
         navigate('/login', { replace: true })
       }
-    } catch (err) {
-      setErrorMsg('Ocorreu um erro inesperado. Tente novamente mais tarde.')
+    } catch (err: any) {
+      const isRateLimit = err?.message?.toLowerCase().includes('rate limit') || err?.status === 429
+
+      if (isRateLimit) {
+        const msg =
+          'Muitas tentativas. Por favor, aguarde alguns minutos antes de tentar novamente.'
+        setErrorMsg(msg)
+        toast({
+          title: 'Muitas tentativas',
+          description: msg,
+          variant: 'destructive',
+        })
+      } else {
+        setErrorMsg('Ocorreu um erro inesperado. Tente novamente mais tarde.')
+      }
     } finally {
       setIsLoading(false)
     }
@@ -111,7 +141,7 @@ export default function ResetPassword() {
               disabled={isLoading || !password || !confirmPassword}
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {isLoading ? 'Atualizando...' : 'Atualizar Senha'}
+              {isLoading ? 'Processando...' : 'Atualizar Senha'}
             </Button>
           </form>
         </CardContent>

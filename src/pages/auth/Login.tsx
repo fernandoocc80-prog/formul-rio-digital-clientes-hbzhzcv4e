@@ -35,6 +35,7 @@ export default function Login() {
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isLoading) return
     setErrorMsg(null)
     setIsLoading(true)
 
@@ -48,15 +49,44 @@ export default function Login() {
         })
         navigate('/welcome', { replace: true, state: { from } })
       } else {
-        setErrorMsg('Credenciais inválidas. Verifique seu e-mail e senha e tente novamente.')
+        const isRateLimit =
+          res.error.message?.toLowerCase().includes('rate limit') ||
+          (res.error as any).status === 429 ||
+          (res.error as any).code === 'over_email_send_rate_limit'
+
+        if (isRateLimit) {
+          const msg =
+            'Muitas tentativas. Por favor, aguarde alguns minutos antes de tentar novamente.'
+          setErrorMsg(msg)
+          toast({
+            title: 'Muitas tentativas',
+            description: msg,
+            variant: 'destructive',
+          })
+        } else {
+          setErrorMsg('Credenciais inválidas. Verifique seu e-mail e senha e tente novamente.')
+          toast({
+            title: 'Credenciais inválidas',
+            description: 'O e-mail ou a senha estão incorretos.',
+            variant: 'destructive',
+          })
+        }
+      }
+    } catch (err: any) {
+      const isRateLimit = err?.message?.toLowerCase().includes('rate limit') || err?.status === 429
+
+      if (isRateLimit) {
+        const msg =
+          'Muitas tentativas. Por favor, aguarde alguns minutos antes de tentar novamente.'
+        setErrorMsg(msg)
         toast({
-          title: 'Credenciais inválidas',
-          description: 'O e-mail ou a senha estão incorretos.',
+          title: 'Muitas tentativas',
+          description: msg,
           variant: 'destructive',
         })
+      } else {
+        setErrorMsg('Ocorreu um erro inesperado ao tentar fazer login.')
       }
-    } catch (err) {
-      setErrorMsg('Ocorreu um erro inesperado ao tentar fazer login.')
     } finally {
       setIsLoading(false)
     }
@@ -134,7 +164,7 @@ export default function Login() {
               disabled={isLoading}
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-              {isLoading ? 'Entrando...' : 'Entrar'}
+              {isLoading ? 'Processando...' : 'Entrar'}
             </Button>
           </form>
 

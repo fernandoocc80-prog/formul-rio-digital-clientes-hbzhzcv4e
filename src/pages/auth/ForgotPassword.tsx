@@ -18,6 +18,7 @@ export default function ForgotPassword() {
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
+    if (isLoading) return
     setIsLoading(true)
 
     try {
@@ -32,9 +33,9 @@ export default function ForgotPassword() {
         if (isRateLimit) {
           toast({
             variant: 'destructive',
-            title: 'Atenção',
+            title: 'Muitas tentativas',
             description:
-              'Limite de envio de e-mail excedido. Por favor, aguarde alguns minutos antes de tentar novamente.',
+              'Muitas tentativas. Por favor, aguarde alguns minutos antes de tentar novamente.',
           })
         } else {
           toast({
@@ -48,12 +49,23 @@ export default function ForgotPassword() {
       } else {
         setIsSubmitted(true)
       }
-    } catch (err) {
-      toast({
-        variant: 'destructive',
-        title: 'Erro inesperado',
-        description: 'Ocorreu um erro inesperado.',
-      })
+    } catch (err: any) {
+      const isRateLimit = err?.message?.toLowerCase().includes('rate limit') || err?.status === 429
+
+      if (isRateLimit) {
+        toast({
+          variant: 'destructive',
+          title: 'Muitas tentativas',
+          description:
+            'Muitas tentativas. Por favor, aguarde alguns minutos antes de tentar novamente.',
+        })
+      } else {
+        toast({
+          variant: 'destructive',
+          title: 'Erro inesperado',
+          description: 'Ocorreu um erro inesperado.',
+        })
+      }
     } finally {
       setIsLoading(false)
     }
@@ -111,7 +123,7 @@ export default function ForgotPassword() {
                   disabled={isLoading}
                 >
                   {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
-                  {isLoading ? 'Enviando...' : 'Enviar Link de Recuperação'}
+                  {isLoading ? 'Processando...' : 'Enviar Link de Recuperação'}
                 </Button>
               </form>
               <div className="mt-6 text-center">
