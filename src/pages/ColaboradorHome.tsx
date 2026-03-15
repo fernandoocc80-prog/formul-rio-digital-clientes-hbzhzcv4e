@@ -1,5 +1,6 @@
+import { useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { PlusCircle, Link as LinkIcon, Eye, Sparkles, Copy } from 'lucide-react'
+import { PlusCircle, Link as LinkIcon, Eye, Sparkles, Copy, Search } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -15,12 +16,14 @@ import { Badge } from '@/components/ui/badge'
 import { Input } from '@/components/ui/input'
 import { useAppStore } from '@/store/AppContext'
 import { useToast } from '@/hooks/use-toast'
+import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
 
 export default function ColaboradorHome() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
   const { currentUser, submissions } = useAppStore()
   const { toast } = useToast()
+  const [searchQuery, setSearchQuery] = useState('')
 
   const currentTab = searchParams.get('tab') || 'actions'
   const PUBLIC_URL = 'https://formulario-digital-clientes-38ac0.goskip.app/form/new'
@@ -41,6 +44,26 @@ export default function ColaboradorHome() {
     })
   }
 
+  const filteredSubmissions = submissions.filter((s) => {
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      const companyName = (s.company?.tradeName || s.company?.suggestedName1 || '').toLowerCase()
+      const clientName = (s.clientName || '').toLowerCase()
+      const protocol = (s.protocol || '').toLowerCase()
+      const email = (s.company?.email || '').toLowerCase()
+
+      if (
+        !clientName.includes(query) &&
+        !companyName.includes(query) &&
+        !protocol.includes(query) &&
+        !email.includes(query)
+      ) {
+        return false
+      }
+    }
+    return true
+  })
+
   return (
     <div className="container py-4 sm:py-6 max-w-5xl space-y-6 sm:space-y-8 animate-fade-in">
       <Card className="bg-gradient-to-r from-blue-50 to-indigo-50/50 border-blue-100 shadow-sm overflow-hidden relative">
@@ -51,10 +74,15 @@ export default function ColaboradorHome() {
           <div className="bg-white p-3.5 rounded-full shadow-sm text-blue-600 hidden sm:flex shrink-0 border border-blue-50">
             <Sparkles className="w-6 h-6" />
           </div>
-          <div className="space-y-1.5">
-            <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-800">
-              {currentUser?.name ? `Bem-vindo, ${currentUser.name}!` : 'Portal de Colaboradores.'}
-            </h1>
+          <div className="space-y-1.5 w-full">
+            <div className="flex items-center gap-3">
+              <h1 className="text-2xl sm:text-3xl font-bold tracking-tight text-slate-800">
+                {currentUser?.name ? `Bem-vindo, ${currentUser.name}!` : 'Portal de Colaboradores.'}
+              </h1>
+              <div className="hidden sm:block">
+                <SyncIndicator />
+              </div>
+            </div>
             <p className="text-slate-600 text-sm sm:text-base max-w-2xl">
               Pronto para gerenciar seus formulários e links de clientes?
             </p>
@@ -120,13 +148,26 @@ export default function ColaboradorHome() {
 
         <TabsContent value="returns" className="space-y-6">
           <Card>
-            <CardHeader>
-              <CardTitle>Histórico de Retornos</CardTitle>
-              <CardDescription>
-                Acompanhe os formulários submetidos e visualize os dados detalhados.
-              </CardDescription>
+            <CardHeader className="pb-4 border-b">
+              <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4">
+                <div>
+                  <CardTitle>Histórico de Retornos</CardTitle>
+                  <CardDescription>
+                    Acompanhe os formulários submetidos e visualize os dados detalhados.
+                  </CardDescription>
+                </div>
+                <div className="relative w-full sm:max-w-xs">
+                  <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+                  <Input
+                    placeholder="Buscar formulário..."
+                    className="pl-9 h-9"
+                    value={searchQuery}
+                    onChange={(e) => setSearchQuery(e.target.value)}
+                  />
+                </div>
+              </div>
             </CardHeader>
-            <CardContent>
+            <CardContent className="pt-6">
               <Table>
                 <TableHeader>
                   <TableRow>
@@ -137,14 +178,16 @@ export default function ColaboradorHome() {
                   </TableRow>
                 </TableHeader>
                 <TableBody>
-                  {submissions.length === 0 ? (
+                  {filteredSubmissions.length === 0 ? (
                     <TableRow>
                       <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
-                        Nenhum retorno de formulário encontrado.
+                        {searchQuery
+                          ? 'Nenhum resultado encontrado para sua busca.'
+                          : 'Nenhum retorno de formulário encontrado.'}
                       </TableCell>
                     </TableRow>
                   ) : (
-                    submissions.map((sub) => (
+                    filteredSubmissions.map((sub) => (
                       <TableRow key={sub.id}>
                         <TableCell className="font-medium">
                           {sub.clientName || 'Não informado'}

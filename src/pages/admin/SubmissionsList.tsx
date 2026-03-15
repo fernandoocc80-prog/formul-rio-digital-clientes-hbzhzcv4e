@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Share2, Download, RefreshCw, CalendarIcon, X } from 'lucide-react'
+import { Eye, Share2, Download, RefreshCw, CalendarIcon, X, Search } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -12,6 +12,7 @@ import {
 } from '@/components/ui/table'
 import { Badge } from '@/components/ui/badge'
 import { Button } from '@/components/ui/button'
+import { Input } from '@/components/ui/input'
 import {
   Select,
   SelectContent,
@@ -61,12 +62,14 @@ export default function SubmissionsList() {
   const [typeFilter, setTypeFilter] = useState('all')
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
+  const [searchQuery, setSearchQuery] = useState('')
 
   useEffect(() => {
     setStatusFilter('all')
     setTypeFilter('all')
     setStartDate(undefined)
     setEndDate(undefined)
+    setSearchQuery('')
     syncSubmissions({ force: true, background: false, skipCache: true }).catch(() => {})
   }, [syncSubmissions])
 
@@ -75,6 +78,7 @@ export default function SubmissionsList() {
     setTypeFilter('all')
     setStartDate(undefined)
     setEndDate(undefined)
+    setSearchQuery('')
   }
 
   const filtered = submissions.filter((s) => {
@@ -95,6 +99,23 @@ export default function SubmissionsList() {
         const end = new Date(endDate)
         end.setHours(0, 0, 0, 0)
         if (subDate.getTime() > end.getTime()) return false
+      }
+    }
+
+    if (searchQuery) {
+      const query = searchQuery.toLowerCase()
+      const companyName = (s.company?.tradeName || s.company?.suggestedName1 || '').toLowerCase()
+      const clientName = (s.clientName || '').toLowerCase()
+      const protocol = (s.protocol || '').toLowerCase()
+      const email = (s.company?.email || '').toLowerCase()
+
+      if (
+        !clientName.includes(query) &&
+        !companyName.includes(query) &&
+        !protocol.includes(query) &&
+        !email.includes(query)
+      ) {
+        return false
       }
     }
 
@@ -192,6 +213,17 @@ export default function SubmissionsList() {
 
       <div className="bg-white border rounded-lg p-4 flex flex-wrap items-center gap-3 w-full shadow-sm">
         <span className="text-sm font-medium text-slate-700 w-full sm:w-auto mr-1">Filtros:</span>
+
+        <div className="relative flex-1 min-w-[200px] w-full sm:w-auto">
+          <Search className="absolute left-2.5 top-2.5 h-4 w-4 text-muted-foreground" />
+          <Input
+            placeholder="Buscar por cliente, empresa ou protocolo..."
+            className="pl-9 h-9"
+            value={searchQuery}
+            onChange={(e) => setSearchQuery(e.target.value)}
+          />
+        </div>
+
         <Popover>
           <PopoverTrigger asChild>
             <Button
@@ -255,7 +287,11 @@ export default function SubmissionsList() {
           </SelectContent>
         </Select>
 
-        {(startDate || endDate || statusFilter !== 'all' || typeFilter !== 'all') && (
+        {(startDate ||
+          endDate ||
+          statusFilter !== 'all' ||
+          typeFilter !== 'all' ||
+          searchQuery) && (
           <Button
             variant="ghost"
             size="sm"
@@ -296,7 +332,9 @@ export default function SubmissionsList() {
               {filtered.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={6} className="text-center py-8 text-muted-foreground">
-                    Nenhum registro encontrado para os filtros selecionados.
+                    {searchQuery
+                      ? 'Nenhum resultado encontrado para sua busca.'
+                      : 'Nenhum registro encontrado para os filtros selecionados.'}
                   </TableCell>
                 </TableRow>
               ) : (
