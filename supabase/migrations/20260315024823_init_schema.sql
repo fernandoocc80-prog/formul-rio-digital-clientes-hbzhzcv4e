@@ -48,19 +48,19 @@ CREATE POLICY "Public can upload documents" ON storage.objects FOR INSERT WITH C
 CREATE POLICY "Anyone can view documents" ON storage.objects FOR SELECT USING (bucket_id = 'documents');
 
 CREATE OR REPLACE FUNCTION public.handle_new_user()
-RETURNS trigger AS $
+RETURNS trigger AS $$
 BEGIN
   INSERT INTO public.profiles (id, email, name, role)
   VALUES (NEW.id, NEW.email, COALESCE(NEW.raw_user_meta_data->>'name', 'Usuário'), 'admin');
   RETURN NEW;
 END;
-$ LANGUAGE plpgsql SECURITY DEFINER;
+$$ LANGUAGE plpgsql SECURITY DEFINER;
 
 CREATE OR REPLACE TRIGGER on_auth_user_created
   AFTER INSERT ON auth.users
   FOR EACH ROW EXECUTE FUNCTION public.handle_new_user();
 
-DO $
+DO $$
 DECLARE
   admin_id UUID := gen_random_uuid();
 BEGIN
@@ -81,5 +81,4 @@ BEGIN
   );
 
   INSERT INTO forms (id, title, description) VALUES ('00000000-0000-0000-0000-000000000001'::uuid, 'Abertura de Empresa', 'Formulário padrão');
-END $;
-
+END $$;

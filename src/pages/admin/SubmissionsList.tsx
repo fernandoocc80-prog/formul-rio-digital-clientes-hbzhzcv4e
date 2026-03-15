@@ -71,7 +71,9 @@ export default function SubmissionsList() {
     setStartDate(undefined)
     setEndDate(undefined)
     setSearchQuery('')
-    syncSubmissions({ force: true, background: false, skipCache: true }).catch(() => {})
+    syncSubmissions({ force: true, background: false, skipCache: true }).catch(() => {
+      /* ignore */
+    })
   }, [syncSubmissions])
 
   const handleClearFilters = () => {

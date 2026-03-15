@@ -28,7 +28,9 @@ export default function Login() {
     clearCache()
     try {
       sessionStorage.clear()
-    } catch (e) {}
+    } catch (e) {
+      // ignore
+    }
   }, [clearCache])
 
   const handleLogin = async (e: React.FormEvent) => {

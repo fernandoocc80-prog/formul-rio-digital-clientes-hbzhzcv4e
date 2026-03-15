@@ -59,7 +59,9 @@ const getAccessLogsDB = (): AccessLog[] => {
   try {
     const saved = localStorage.getItem(ACCESS_LOGS_KEY)
     if (saved) return JSON.parse(saved)
-  } catch (e) {}
+  } catch (e) {
+    // ignore
+  }
   return []
 }
 
@@ -67,7 +69,9 @@ const getSessionsDB = (): ActiveSession[] => {
   try {
     const saved = localStorage.getItem(SESSIONS_STORAGE_KEY)
     if (saved) return JSON.parse(saved)
-  } catch (e) {}
+  } catch (e) {
+    // ignore
+  }
   return []
 }
 
@@ -125,7 +129,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   const clearCache = useCallback(() => {
     try {
       sessionStorage.clear()
-    } catch (e) {}
+    } catch (e) {
+      // ignore
+    }
   }, [])
 
   const syncSubmissions = useCallback(
@@ -225,7 +231,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
 
       supabase.functions
         .invoke('generate-pdf', { body: { submissionId: inserted.id } })
-        .catch(() => {})
+        .catch(() => {
+          /* ignore */
+        })
 
       return inserted.id
     },
@@ -361,7 +369,9 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   }, [])
 
   useEffect(() => {
-    syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
+    syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {
+      /* ignore */
+    })
   }, [syncSubmissions])
 
   return (
