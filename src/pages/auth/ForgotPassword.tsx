@@ -5,43 +5,55 @@ import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
 import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
-import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
-import { Building2, AlertCircle, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { Building2, Loader2, CheckCircle2, ArrowLeft } from 'lucide-react'
+import { useToast } from '@/hooks/use-toast'
 
 export default function ForgotPassword() {
   const [email, setEmail] = useState('')
   const [isLoading, setIsLoading] = useState(false)
-  const [errorMsg, setErrorMsg] = useState<string | null>(null)
   const [isSubmitted, setIsSubmitted] = useState(false)
 
   const { resetPassword } = useAuth()
+  const { toast } = useToast()
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault()
-    setErrorMsg(null)
     setIsLoading(true)
 
     try {
       const { error } = await resetPassword(email.trim().toLowerCase())
+
       if (error) {
         const isRateLimit =
-          error.message?.toLowerCase().includes('rate limit') || (error as any).status === 429
+          error.message?.toLowerCase().includes('rate limit') ||
+          (error as any).status === 429 ||
+          (error as any).code === 'over_email_send_rate_limit'
 
         if (isRateLimit) {
-          setErrorMsg(
-            'Limite de envio de e-mail excedido. Por favor, aguarde alguns minutos antes de realizar uma nova tentativa.',
-          )
+          toast({
+            variant: 'destructive',
+            title: 'Atenção',
+            description:
+              'Limite de envio de e-mail excedido. Por favor, aguarde alguns minutos antes de tentar novamente.',
+          })
         } else {
-          setErrorMsg(
-            error.message ||
+          toast({
+            variant: 'destructive',
+            title: 'Erro na solicitação',
+            description:
+              error.message ||
               'Não foi possível enviar o e-mail de recuperação. Verifique se o e-mail está correto e tente novamente.',
-          )
+          })
         }
       } else {
         setIsSubmitted(true)
       }
     } catch (err) {
-      setErrorMsg('Ocorreu um erro inesperado.')
+      toast({
+        variant: 'destructive',
+        title: 'Erro inesperado',
+        description: 'Ocorreu um erro inesperado.',
+      })
     } finally {
       setIsLoading(false)
     }
@@ -77,17 +89,6 @@ export default function ForgotPassword() {
             </div>
           ) : (
             <>
-              {errorMsg && (
-                <Alert
-                  variant="destructive"
-                  className="mb-4 animate-in fade-in zoom-in-95 duration-200"
-                >
-                  <AlertCircle className="h-4 w-4" />
-                  <AlertTitle>Erro na solicitação</AlertTitle>
-                  <AlertDescription>{errorMsg}</AlertDescription>
-                </Alert>
-              )}
-
               <form onSubmit={handleSubmit} className="space-y-4">
                 <div className="space-y-2">
                   <Label htmlFor="email">E-mail cadastrado</Label>
