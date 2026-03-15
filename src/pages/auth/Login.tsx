@@ -40,52 +40,110 @@ export default function Login() {
     setIsLoading(true)
 
     try {
-      const res = await signIn(email.trim().toLowerCase(), password)
+      let res
+      const retries = 2
 
-      if (!res.error) {
+      // Retry strategy for network oscillations
+      for (let i = 0; i <= retries; i++) {
+        try {
+          res = await signIn(email.trim().toLowerCase(), password)
+          if (
+            res.error &&
+            (res.error.message?.includes('Failed to fetch') ||
+              res.error.message?.includes('NetworkError')) &&
+            i < retries
+          ) {
+            await new Promise((r) => setTimeout(r, 1000 * (i + 1)))
+            continue
+          }
+          break
+        } catch (fetchErr: any) {
+          if (
+            (fetchErr.message?.includes('Failed to fetch') ||
+              fetchErr.message?.includes('NetworkError')) &&
+            i < retries
+          ) {
+            await new Promise((r) => setTimeout(r, 1000 * (i + 1)))
+            continue
+          }
+          throw fetchErr
+        }
+      }
+
+      if (!res?.error) {
         toast({
           title: 'Acesso Liberado',
           description: 'Sessão iniciada com sucesso.',
         })
         navigate('/welcome', { replace: true, state: { from } })
       } else {
+        const errMsg = res.error.message?.toLowerCase() || ''
         const isRateLimit =
-          res.error.message?.toLowerCase().includes('rate limit') ||
+          errMsg.includes('rate limit') ||
           (res.error as any).status === 429 ||
-          (res.error as any).code === 'over_email_send_rate_limit'
+          (res.error as any).code === 'over_email_send_rate_limit' ||
+          errMsg.includes('too many requests')
 
         if (isRateLimit) {
           const msg =
-            'Muitas tentativas. Por favor, aguarde alguns minutos antes de tentar novamente.'
+            'Limite de tentativas atingido. Por favor, aguarde alguns minutos antes de tentar novamente.'
           setErrorMsg(msg)
           toast({
             title: 'Muitas tentativas',
             description: msg,
             variant: 'destructive',
           })
-        } else {
+        } else if (errMsg.includes('invalid login credentials') || errMsg.includes('credenciais')) {
           setErrorMsg('Credenciais inválidas. Verifique seu e-mail e senha e tente novamente.')
           toast({
             title: 'Credenciais inválidas',
             description: 'O e-mail ou a senha estão incorretos.',
             variant: 'destructive',
           })
+        } else if (
+          errMsg.includes('failed to fetch') ||
+          errMsg.includes('network error') ||
+          errMsg.includes('timeout')
+        ) {
+          const msg = 'Verifique sua conexão com a internet e tente novamente.'
+          setErrorMsg(msg)
+          toast({
+            title: 'Falha na conexão',
+            description: msg,
+            variant: 'destructive',
+          })
+        } else {
+          setErrorMsg('Não foi possível realizar o login. Tente novamente mais tarde.')
         }
       }
     } catch (err: any) {
-      const isRateLimit = err?.message?.toLowerCase().includes('rate limit') || err?.status === 429
+      const errMsg = err?.message?.toLowerCase() || ''
+      const isRateLimit =
+        errMsg.includes('rate limit') || err?.status === 429 || errMsg.includes('too many requests')
 
       if (isRateLimit) {
         const msg =
-          'Muitas tentativas. Por favor, aguarde alguns minutos antes de tentar novamente.'
+          'Limite de tentativas atingido. Por favor, aguarde alguns minutos antes de tentar novamente.'
         setErrorMsg(msg)
         toast({
           title: 'Muitas tentativas',
           description: msg,
           variant: 'destructive',
         })
+      } else if (
+        errMsg.includes('failed to fetch') ||
+        errMsg.includes('network error') ||
+        errMsg.includes('timeout')
+      ) {
+        const msg = 'Verifique sua conexão com a internet e tente novamente.'
+        setErrorMsg(msg)
+        toast({
+          title: 'Falha na conexão',
+          description: msg,
+          variant: 'destructive',
+        })
       } else {
-        setErrorMsg('Ocorreu um erro inesperado ao tentar fazer login.')
+        setErrorMsg('Ocorreu um erro inesperado ao tentar fazer login. Tente novamente.')
       }
     } finally {
       setIsLoading(false)
@@ -117,7 +175,7 @@ export default function Login() {
               className="mb-4 animate-in fade-in zoom-in-95 duration-200"
             >
               <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Erro de Autenticação</AlertTitle>
+              <AlertTitle>Atenção</AlertTitle>
               <AlertDescription>{errorMsg}</AlertDescription>
             </Alert>
           )}
@@ -136,6 +194,7 @@ export default function Login() {
                 autoCorrect="off"
                 spellCheck="false"
                 required
+                disabled={isLoading}
               />
             </div>
             <div className="space-y-2">
@@ -156,11 +215,12 @@ export default function Login() {
                 onChange={(e) => setPassword(e.target.value)}
                 autoComplete="current-password"
                 required
+                disabled={isLoading}
               />
             </div>
             <Button
               type="submit"
-              className="w-full bg-blue-600 hover:bg-blue-700 text-white"
+              className="w-full bg-blue-600 hover:bg-blue-700 text-white disabled:opacity-70 transition-opacity"
               disabled={isLoading}
             >
               {isLoading ? <Loader2 className="h-4 w-4 animate-spin mr-2" /> : null}
@@ -182,15 +242,23 @@ export default function Login() {
                 {users.slice(0, 4).map((u) => (
                   <div
                     key={u.id}
-                    className="flex justify-between items-center bg-white px-2.5 py-1.5 rounded-sm border border-slate-200 shadow-sm hover:border-blue-300 cursor-pointer transition-colors"
-                    onClick={() => handleQuickFill(u.email)}
+                    className={`flex justify-between items-center bg-white px-2.5 py-1.5 rounded-sm border border-slate-200 shadow-sm transition-colors ${
+                      isLoading
+                        ? 'opacity-50 cursor-not-allowed'
+                        : 'hover:border-blue-300 cursor-pointer'
+                    }`}
+                    onClick={() => !isLoading && handleQuickFill(u.email)}
                     title="Clique para preencher o e-mail"
                   >
                     <span className="font-mono text-slate-800 truncate mr-2" title={u.email}>
                       {u.email}
                     </span>
                     <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold shrink-0 ${u.role === 'colaborador' ? 'bg-amber-100 text-amber-700' : 'bg-blue-100 text-blue-700'}`}
+                      className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold shrink-0 ${
+                        u.role === 'colaborador'
+                          ? 'bg-amber-100 text-amber-700'
+                          : 'bg-blue-100 text-blue-700'
+                      }`}
                     >
                       {u.role === 'colaborador' ? 'Colab' : 'Admin'}
                     </span>

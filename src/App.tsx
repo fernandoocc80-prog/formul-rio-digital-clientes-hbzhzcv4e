@@ -16,7 +16,7 @@ import SubmissionDetail from './pages/admin/SubmissionDetail'
 import UsersList from './pages/admin/UsersList'
 import RegisterUser from './pages/admin/RegisterUser'
 import AccessHistory from './pages/admin/AccessHistory'
-import ClientForm from './pages/form/ClientForm'
+import FormRouter from './pages/form/FormRouter'
 import FormSuccess from './pages/form/FormSuccess'
 import ShortLinkRedirect from './pages/form/ShortLinkRedirect'
 import Login from './pages/auth/Login'
@@ -41,7 +41,7 @@ const App = () => (
             <Route path="/reset-password" element={<ResetPassword />} />
 
             <Route element={<Layout />}>
-              <Route path="/form/:id" element={<ClientForm />} />
+              <Route path="/form/:id" element={<FormRouter />} />
               <Route path="/form/:id/success" element={<FormSuccess />} />
             </Route>
 
