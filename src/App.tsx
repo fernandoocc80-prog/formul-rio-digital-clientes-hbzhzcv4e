@@ -2,6 +2,7 @@ import { BrowserRouter, Routes, Route } from 'react-router-dom'
 import { Toaster } from '@/components/ui/toaster'
 import { Toaster as Sonner } from '@/components/ui/sonner'
 import { TooltipProvider } from '@/components/ui/tooltip'
+import { AuthProvider } from '@/hooks/use-auth'
 import { AppProvider } from '@/store/AppContext'
 
 import Layout from './components/Layout'
@@ -26,49 +27,45 @@ import Settings from './pages/settings/Settings'
 
 const App = () => (
   <BrowserRouter future={{ v7_startTransition: false, v7_relativeSplatPath: false }}>
-    <AppProvider>
-      <TooltipProvider>
-        <Toaster />
-        <Sonner />
-        <Routes>
-          {/* Public Auth Routes */}
-          <Route path="/login" element={<Login />} />
-          <Route path="/register" element={<Register />} />
+    <AuthProvider>
+      <AppProvider>
+        <TooltipProvider>
+          <Toaster />
+          <Sonner />
+          <Routes>
+            <Route path="/login" element={<Login />} />
+            <Route path="/register" element={<Register />} />
 
-          {/* Public Client Form Routes */}
-          <Route element={<Layout />}>
-            <Route path="/form/:id" element={<ClientForm />} />
-            <Route path="/form/:id/success" element={<FormSuccess />} />
-          </Route>
+            <Route element={<Layout />}>
+              <Route path="/form/:id" element={<ClientForm />} />
+              <Route path="/form/:id/success" element={<FormSuccess />} />
+            </Route>
 
-          {/* Protected Administrative Routes */}
-          <Route element={<ProtectedRoute />}>
-            <Route path="/welcome" element={<Welcome />} />
+            <Route element={<ProtectedRoute />}>
+              <Route path="/welcome" element={<Welcome />} />
 
-            <Route element={<AdminLayout />}>
-              {/* Rotas unificadas e compartilhadas entre Administrador e Colaborador */}
-              <Route path="/" element={<Index />} />
-              <Route path="/acoes-rapidas" element={<QuickActions />} />
-              <Route path="/admin" element={<SubmissionsList />} />
-              <Route path="/admin/:id" element={<SubmissionDetail />} />
-              <Route path="/settings" element={<Settings />} />
+              <Route element={<AdminLayout />}>
+                <Route path="/" element={<Index />} />
+                <Route path="/acoes-rapidas" element={<QuickActions />} />
+                <Route path="/admin" element={<SubmissionsList />} />
+                <Route path="/admin/:id" element={<SubmissionDetail />} />
+                <Route path="/settings" element={<Settings />} />
 
-              {/* Rotas restritas apenas para Administrador */}
-              <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
-                <Route path="/admin/users" element={<UsersList />} />
-                <Route path="/admin/register-user" element={<RegisterUser />} />
-                <Route path="/admin/access-history" element={<AccessHistory />} />
+                <Route element={<ProtectedRoute allowedRoles={['admin']} />}>
+                  <Route path="/admin/users" element={<UsersList />} />
+                  <Route path="/admin/register-user" element={<RegisterUser />} />
+                  <Route path="/admin/access-history" element={<AccessHistory />} />
+                </Route>
               </Route>
             </Route>
-          </Route>
 
-          {/* Rotas curtas para fácil compartilhamento e acesso via QR Code */}
-          <Route path="/s/:id" element={<ShortLinkRedirect />} />
+            <Route path="/s/:id" element={<ShortLinkRedirect />} />
 
-          <Route path="*" element={<NotFound />} />
-        </Routes>
-      </TooltipProvider>
-    </AppProvider>
+            <Route path="*" element={<NotFound />} />
+          </Routes>
+        </TooltipProvider>
+      </AppProvider>
+    </AuthProvider>
   </BrowserRouter>
 )
 

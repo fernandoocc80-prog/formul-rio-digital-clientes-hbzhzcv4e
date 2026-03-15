@@ -1,6 +1,6 @@
 import { useState, useEffect } from 'react'
 import { Link } from 'react-router-dom'
-import { Eye, Share2, Download, RefreshCw, CalendarIcon, X, Search } from 'lucide-react'
+import { Eye, Share2, Download, RefreshCw, CalendarIcon, X, Search, Loader2 } from 'lucide-react'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import {
   Table,
@@ -26,9 +26,8 @@ import { useAppStore } from '@/store/AppContext'
 import { ShareFormDialog } from '@/components/share/ShareFormDialog'
 import { EmailSettingsDialog } from '@/components/admin/EmailSettingsDialog'
 import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
-import { SubmissionStatus } from '@/types'
+import { SubmissionStatus, Submission } from '@/types'
 import { cn } from '@/lib/utils'
-import { downloadSubmissionPDF } from '@/lib/documentGenerator'
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -38,7 +37,6 @@ const getStatusBadge = (status: string) => {
       return <Badge className="bg-amber-500 hover:bg-amber-600 text-white">Em análise</Badge>
     case 'pending':
       return <Badge className="bg-slate-500 hover:bg-slate-600 text-white">Pendente</Badge>
-    case 'draft':
     default:
       return <Badge variant="outline">Rascunho</Badge>
   }
@@ -58,12 +56,14 @@ const getStatusLabel = (status: string) => {
 }
 
 export default function SubmissionsList() {
-  const { submissions, updateSubmission, syncStatus, syncSubmissions } = useAppStore()
+  const { submissions, updateSubmission, syncStatus, syncSubmissions, downloadGeneratedPDF } =
+    useAppStore()
   const [statusFilter, setStatusFilter] = useState('all')
   const [typeFilter, setTypeFilter] = useState('all')
   const [startDate, setStartDate] = useState<Date | undefined>(undefined)
   const [endDate, setEndDate] = useState<Date | undefined>(undefined)
   const [searchQuery, setSearchQuery] = useState('')
+  const [downloading, setDownloading] = useState<string | null>(null)
 
   useEffect(() => {
     setStatusFilter('all')
@@ -82,6 +82,12 @@ export default function SubmissionsList() {
     setSearchQuery('')
   }
 
+  const handleDownloadPDF = async (sub: Submission) => {
+    setDownloading(sub.id)
+    await downloadGeneratedPDF(sub)
+    setDownloading(null)
+  }
+
   const filtered = submissions.filter((s) => {
     if (statusFilter !== 'all' && s.status !== statusFilter) return false
     if (typeFilter !== 'all' && s.company?.type !== typeFilter) return false
@@ -89,13 +95,11 @@ export default function SubmissionsList() {
     if (startDate || endDate) {
       const subDate = new Date(s.createdAt)
       subDate.setHours(0, 0, 0, 0)
-
       if (startDate) {
         const start = new Date(startDate)
         start.setHours(0, 0, 0, 0)
         if (subDate.getTime() < start.getTime()) return false
       }
-
       if (endDate) {
         const end = new Date(endDate)
         end.setHours(0, 0, 0, 0)
@@ -115,9 +119,8 @@ export default function SubmissionsList() {
         !companyName.includes(query) &&
         !protocol.includes(query) &&
         !email.includes(query)
-      ) {
+      )
         return false
-      }
     }
 
     return true
@@ -136,13 +139,9 @@ export default function SubmissionsList() {
       'Qtd Sócios',
       'Docs Anexados',
     ]
-
     const rows = filtered.map((s) => {
       const companyName = s.company?.tradeName || s.company?.suggestedName1 || 'Não informado'
-      const docsCount = `${s.documents?.filter((d) => d.fileName).length || 0}/${
-        s.documents?.length || 0
-      }`
-
+      const docsCount = `${s.documents?.filter((d) => d.fileName).length || 0}/${s.documents?.length || 0}`
       return [
         s.protocol,
         s.clientName,
@@ -156,12 +155,10 @@ export default function SubmissionsList() {
         docsCount,
       ]
     })
-
     const csvContent = [
       headers.join(','),
       ...rows.map((row) => row.map((field) => `"${String(field).replace(/"/g, '""')}"`).join(',')),
     ].join('\n')
-
     const blob = new Blob([new Uint8Array([0xef, 0xbb, 0xbf]), csvContent], {
       type: 'text/csv;charset=utf-8;',
     })
@@ -200,13 +197,11 @@ export default function SubmissionsList() {
         <div className="flex flex-wrap items-center gap-3 w-full xl:w-auto">
           <EmailSettingsDialog />
           <Button variant="outline" onClick={handleExportCSV} className="flex-1 md:flex-none">
-            <Download className="h-4 w-4 mr-2" />
-            Exportar CSV
+            <Download className="h-4 w-4 mr-2" /> Exportar CSV
           </Button>
           <ShareFormDialog id="new">
             <Button variant="outline" className="flex-1 md:flex-none">
-              <Share2 className="h-4 w-4 mr-2" />
-              Compartilhar Link
+              <Share2 className="h-4 w-4 mr-2" /> Compartilhar Link
             </Button>
           </ShareFormDialog>
         </div>
@@ -387,18 +382,19 @@ export default function SubmissionsList() {
                         <Button
                           variant="ghost"
                           size="sm"
-                          onClick={() => downloadSubmissionPDF(sub)}
+                          onClick={() => handleDownloadPDF(sub)}
+                          disabled={downloading === sub.id}
                           title="Baixar Arquivo PDF"
                         >
-                          <Download className="h-4 w-4 xl:mr-2" />
+                          {downloading === sub.id ? (
+                            <Loader2 className="h-4 w-4 xl:mr-2 animate-spin" />
+                          ) : (
+                            <Download className="h-4 w-4 xl:mr-2" />
+                          )}
                           <span className="hidden xl:inline">PDF</span>
                         </Button>
                         <ShareFormDialog id={sub.id}>
-                          <Button
-                            variant="ghost"
-                            size="sm"
-                            title="Compartilhar link específico deste processo"
-                          >
+                          <Button variant="ghost" size="sm" title="Compartilhar link específico">
                             <Share2 className="h-4 w-4 xl:mr-2" />
                             <span className="hidden xl:inline">Share</span>
                           </Button>

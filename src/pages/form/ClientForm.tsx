@@ -1,6 +1,6 @@
 import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { ChevronRight, ChevronLeft, Check, Moon, Sun, Building2 } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, Moon, Sun, Building2, Loader2 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/hooks/use-toast'
@@ -33,6 +33,7 @@ export default function ClientForm() {
 
   const [isDark, setIsDark] = useState(false)
   const [currentStepId, setCurrentStepId] = useState('company')
+  const [isSubmitting, setIsSubmitting] = useState(false)
 
   const [clientName, setClientName] = useState('')
   const [company, setCompany] = useState<CompanyData>({
@@ -97,7 +98,6 @@ export default function ClientForm() {
   const activeStepId = visibleSteps[currentIndex].id
 
   const handleNext = () => {
-    // Sistema valida dados - Automatic Server/Client-side validation
     if (activeStepId === 'company') {
       if (!company.tradeName || !company.email) {
         toast({
@@ -179,31 +179,42 @@ export default function ClientForm() {
     }
   }
 
-  const handleSubmit = () => {
-    const data = {
-      clientName: clientName || company.tradeName || company.suggestedName1 || 'Cliente Novo',
-      status: 'pending' as const,
-      company,
-      partners: company.type === 'mei' ? [] : partners,
-      activity,
-      documents,
-      signature,
-    }
+  const handleSubmit = async () => {
+    setIsSubmitting(true)
+    try {
+      const data = {
+        clientName: clientName || company.tradeName || company.suggestedName1 || 'Cliente Novo',
+        status: 'pending' as const,
+        company,
+        partners: company.type === 'mei' ? [] : partners,
+        activity,
+        documents,
+        signature,
+      }
 
-    if (id && id !== 'new') {
-      updateSubmission(id, data)
+      if (id && id !== 'new') {
+        await updateSubmission(id, data)
+        toast({
+          title: 'Sucesso!',
+          description: 'Seus dados foram atualizados e enviados com sucesso.',
+        })
+        navigate(`/form/${id}/success`)
+      } else {
+        const newId = await addSubmission(data)
+        toast({
+          title: 'Sucesso!',
+          description: 'Seu formulário foi enviado com sucesso e recebido pela nossa equipe.',
+        })
+        navigate(`/form/${newId}/success`)
+      }
+    } catch (err) {
       toast({
-        title: 'Sucesso!',
-        description: 'Seus dados foram atualizados e enviados com sucesso.',
+        title: 'Erro ao processar',
+        description: 'Houve um problema ao enviar o formulário.',
+        variant: 'destructive',
       })
-      navigate(`/form/${id}/success`)
-    } else {
-      const newId = addSubmission(data)
-      toast({
-        title: 'Sucesso!',
-        description: 'Seu formulário foi enviado com sucesso e recebido pela nossa equipe.',
-      })
-      navigate(`/form/${newId}/success`)
+    } finally {
+      setIsSubmitting(false)
     }
   }
 
@@ -272,18 +283,24 @@ export default function ClientForm() {
       </div>
 
       <div className="fixed sm:static bottom-0 left-0 right-0 bg-background/95 sm:bg-transparent backdrop-blur-md sm:bg-transparent z-50 p-4 sm:p-0 pt-4 sm:pt-8 border-t border-border mt-8 flex justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] sm:shadow-none">
-        <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
+        <Button
+          variant="outline"
+          onClick={handlePrev}
+          disabled={currentIndex === 0 || isSubmitting}
+        >
           <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
         </Button>
         {currentIndex === visibleSteps.length - 1 ? (
           <Button
             onClick={handleSubmit}
+            disabled={isSubmitting}
             className="bg-blue-600 hover:bg-blue-700 text-white font-medium shadow-md transition-all active:scale-95"
           >
+            {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
             Finalizar formulário <Check className="w-4 h-4 ml-2" />
           </Button>
         ) : (
-          <Button onClick={handleNext}>
+          <Button onClick={handleNext} disabled={isSubmitting}>
             Próximo <ChevronRight className="w-4 h-4 ml-2" />
           </Button>
         )}

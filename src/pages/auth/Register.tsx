@@ -1,5 +1,6 @@
 import { useState, useEffect } from 'react'
 import { useNavigate, Link } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 import { useAppStore } from '@/store/AppContext'
 import { Button } from '@/components/ui/button'
 import { Input } from '@/components/ui/input'
@@ -13,12 +14,12 @@ export default function Register() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [confirmPassword, setConfirmPassword] = useState('')
-  const { registerUser, users, login } = useAppStore()
+  const { signUp } = useAuth()
+  const { users } = useAppStore()
   const navigate = useNavigate()
   const { toast } = useToast()
 
   useEffect(() => {
-    // Prevent access if an admin already exists (security requirement)
     if (users.length > 0) {
       toast({
         title: 'Acesso restrito',
@@ -36,12 +37,16 @@ export default function Register() {
       toast({ title: 'Senhas não conferem', variant: 'destructive' })
       return
     }
-    const normalizedEmail = email.trim().toLowerCase()
-    registerUser(name, normalizedEmail, password, 'admin')
-    toast({ title: 'Conta criada com sucesso!' })
-    const res = await login(normalizedEmail, password)
-    if (res.success) {
+    const res = await signUp(email.trim().toLowerCase(), password)
+    if (!res.error) {
+      toast({ title: 'Conta criada com sucesso!' })
       navigate('/welcome')
+    } else {
+      toast({
+        title: 'Erro ao criar conta',
+        description: res.error.message,
+        variant: 'destructive',
+      })
     }
   }
 

@@ -9,6 +9,7 @@ import {
   Search,
   RefreshCw,
   Download,
+  Loader2,
 } from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
@@ -27,14 +28,16 @@ import { useAppStore } from '@/store/AppContext'
 import { useToast } from '@/hooks/use-toast'
 import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
 import { cn } from '@/lib/utils'
-import { downloadSubmissionPDF } from '@/lib/documentGenerator'
+import { Submission } from '@/types'
 
 export default function QuickActions() {
   const navigate = useNavigate()
   const [searchParams, setSearchParams] = useSearchParams()
-  const { currentUser, submissions, syncSubmissions, syncStatus } = useAppStore()
+  const { currentUser, submissions, syncSubmissions, syncStatus, downloadGeneratedPDF } =
+    useAppStore()
   const { toast } = useToast()
   const [searchQuery, setSearchQuery] = useState('')
+  const [downloading, setDownloading] = useState<string | null>(null)
 
   const currentTab = searchParams.get('tab') || 'actions'
   const PUBLIC_URL = 'https://formulario-digital-clientes-38ac0.goskip.app/form/new'
@@ -45,7 +48,6 @@ export default function QuickActions() {
 
   const handleCopyLink = () => {
     const message = `Olá! Para darmos andamento na abertura da sua empresa, por favor preencha o formulário no link a seguir: ${PUBLIC_URL}`
-
     navigator.clipboard.writeText(message).then(() => {
       toast({
         title: 'Mensagem copiada com sucesso!',
@@ -53,6 +55,12 @@ export default function QuickActions() {
           'A mensagem contendo o link foi copiada e está pronta para ser enviada ao cliente.',
       })
     })
+  }
+
+  const handleDownloadPDF = async (sub: Submission) => {
+    setDownloading(sub.id)
+    await downloadGeneratedPDF(sub)
+    setDownloading(null)
   }
 
   const filteredSubmissions = submissions.filter((s) => {
@@ -152,8 +160,7 @@ export default function QuickActions() {
                   className="text-center bg-muted/50 font-mono text-xs sm:text-sm truncate px-2"
                 />
                 <Button size="lg" variant="outline" onClick={handleCopyLink} className="w-full">
-                  <Copy className="w-4 h-4 mr-2" />
-                  Copiar Mensagem
+                  <Copy className="w-4 h-4 mr-2" /> Copiar Mensagem
                 </Button>
               </CardContent>
             </Card>
@@ -236,10 +243,15 @@ export default function QuickActions() {
                             <Button
                               variant="ghost"
                               size="sm"
-                              onClick={() => downloadSubmissionPDF(sub)}
+                              onClick={() => handleDownloadPDF(sub)}
+                              disabled={downloading === sub.id}
                               title="Baixar Arquivo PDF"
                             >
-                              <Download className="w-4 h-4 sm:mr-2" />
+                              {downloading === sub.id ? (
+                                <Loader2 className="w-4 h-4 sm:mr-2 animate-spin" />
+                              ) : (
+                                <Download className="w-4 h-4 sm:mr-2" />
+                              )}
                               <span className="hidden sm:inline">PDF</span>
                             </Button>
                             <Button variant="ghost" size="sm" asChild>

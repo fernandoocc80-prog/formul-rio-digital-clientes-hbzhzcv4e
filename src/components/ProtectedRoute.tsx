@@ -1,4 +1,5 @@
 import { Navigate, Outlet, useLocation } from 'react-router-dom'
+import { useAuth } from '@/hooks/use-auth'
 import { useAppStore } from '@/store/AppContext'
 
 interface ProtectedRouteProps {
@@ -6,17 +7,19 @@ interface ProtectedRouteProps {
 }
 
 export default function ProtectedRoute({ allowedRoles }: ProtectedRouteProps) {
+  const { user, loading } = useAuth()
   const { currentUser } = useAppStore()
   const location = useLocation()
 
-  if (!currentUser) {
+  if (loading) return null
+
+  if (!user) {
     return <Navigate to="/login" state={{ from: location }} replace />
   }
 
-  const role = currentUser.role || 'admin'
+  const role = currentUser?.role || 'admin'
 
   if (allowedRoles && !allowedRoles.includes(role)) {
-    // Redirecionamento unificado para o dashboard global (home) em caso de acesso restrito
     return <Navigate to="/" replace />
   }
 

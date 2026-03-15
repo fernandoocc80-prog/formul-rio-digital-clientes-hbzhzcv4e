@@ -1,19 +1,19 @@
 import { useState } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Printer, Code, ArrowLeft, CheckCircle2, Share2 } from 'lucide-react'
+import { Printer, Code, ArrowLeft, CheckCircle2, Share2, Loader2 } from 'lucide-react'
 import { useAppStore } from '@/store/AppContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { ShareFormDialog } from '@/components/share/ShareFormDialog'
-import { downloadSubmissionPDF } from '@/lib/documentGenerator'
 
 export default function SubmissionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getSubmission } = useAppStore()
+  const { getSubmission, downloadGeneratedPDF } = useAppStore()
   const [viewHtml, setViewHtml] = useState(false)
+  const [isDownloading, setIsDownloading] = useState(false)
 
   const submission = id ? getSubmission(id) : undefined
 
@@ -21,9 +21,11 @@ export default function SubmissionDetail() {
     return <div className="p-8 text-center">Registro não encontrado.</div>
   }
 
-  const handlePrint = () => {
+  const handlePrint = async () => {
     if (submission) {
-      downloadSubmissionPDF(submission)
+      setIsDownloading(true)
+      await downloadGeneratedPDF(submission)
+      setIsDownloading(false)
     }
   }
 
@@ -55,8 +57,16 @@ export default function SubmissionDetail() {
               {viewHtml ? 'Ver Formatado' : 'Exportar Dados'}
             </span>
           </Button>
-          <Button onClick={handlePrint} className="flex-1 sm:flex-none bg-primary text-white">
-            <Printer className="h-4 w-4 mr-2" />
+          <Button
+            onClick={handlePrint}
+            disabled={isDownloading}
+            className="flex-1 sm:flex-none bg-primary text-white"
+          >
+            {isDownloading ? (
+              <Loader2 className="h-4 w-4 mr-2 animate-spin" />
+            ) : (
+              <Printer className="h-4 w-4 mr-2" />
+            )}
             Baixar PDF
           </Button>
         </div>
@@ -136,7 +146,6 @@ export default function SubmissionDetail() {
               )}
             </div>
           </section>
-
           <Separator />
 
           <section>
@@ -164,7 +173,6 @@ export default function SubmissionDetail() {
               </div>
             </div>
           </section>
-
           <Separator />
 
           {submission.company?.type !== 'mei' && (
@@ -234,7 +242,6 @@ export default function SubmissionDetail() {
               )}
             </div>
           </section>
-
           <Separator />
 
           <section className="print-break-inside-avoid text-center pt-8 pb-16">
