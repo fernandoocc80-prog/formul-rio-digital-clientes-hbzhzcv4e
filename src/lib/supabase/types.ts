@@ -9,6 +9,41 @@ export type Database = {
   }
   public: {
     Tables: {
+      form_drafts: {
+        Row: {
+          data: Json
+          expires_at: string
+          form_id: string
+          id: string
+          updated_at: string
+          user_id: string
+        }
+        Insert: {
+          data: Json
+          expires_at?: string
+          form_id: string
+          id?: string
+          updated_at?: string
+          user_id: string
+        }
+        Update: {
+          data?: Json
+          expires_at?: string
+          form_id?: string
+          id?: string
+          updated_at?: string
+          user_id?: string
+        }
+        Relationships: [
+          {
+            foreignKeyName: 'form_drafts_form_id_fkey'
+            columns: ['form_id']
+            isOneToOne: false
+            referencedRelation: 'forms'
+            referencedColumns: ['id']
+          },
+        ]
+      }
       form_submissions: {
         Row: {
           created_at: string
@@ -265,6 +300,13 @@ export const Constants = {
 // --- COLUMN TYPES (actual PostgreSQL types) ---
 // Use this to know the real database type when writing migrations.
 // "string" in TypeScript types above may be uuid, text, varchar, timestamptz, etc.
+// Table: form_drafts
+//   id: uuid (not null, default: gen_random_uuid())
+//   user_id: uuid (not null)
+//   form_id: uuid (not null)
+//   data: jsonb (not null)
+//   updated_at: timestamp with time zone (not null, default: now())
+//   expires_at: timestamp with time zone (not null, default: (now() + '30 days'::interval))
 // Table: form_submissions
 //   id: uuid (not null, default: gen_random_uuid())
 //   form_id: uuid (nullable)
@@ -290,6 +332,11 @@ export const Constants = {
 //   created_at: timestamp with time zone (not null, default: now())
 
 // --- CONSTRAINTS ---
+// Table: form_drafts
+//   FOREIGN KEY form_drafts_form_id_fkey: FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE CASCADE
+//   PRIMARY KEY form_drafts_pkey: PRIMARY KEY (id)
+//   FOREIGN KEY form_drafts_user_id_fkey: FOREIGN KEY (user_id) REFERENCES auth.users(id) ON DELETE CASCADE
+//   UNIQUE form_drafts_user_id_form_id_key: UNIQUE (user_id, form_id)
 // Table: form_submissions
 //   FOREIGN KEY form_submissions_form_id_fkey: FOREIGN KEY (form_id) REFERENCES forms(id) ON DELETE SET NULL
 //   PRIMARY KEY form_submissions_pkey: PRIMARY KEY (id)
@@ -303,6 +350,10 @@ export const Constants = {
 //   PRIMARY KEY profiles_pkey: PRIMARY KEY (id)
 
 // --- ROW LEVEL SECURITY POLICIES ---
+// Table: form_drafts
+//   Policy "Users can manage their own drafts" (ALL, PERMISSIVE) roles={public}
+//     USING: (auth.uid() = user_id)
+//     WITH CHECK: (auth.uid() = user_id)
 // Table: form_submissions
 //   Policy "Anyone can insert submissions" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
@@ -338,3 +389,7 @@ export const Constants = {
 //   END;
 //   $function$
 //
+
+// --- INDEXES ---
+// Table: form_drafts
+//   CREATE UNIQUE INDEX form_drafts_user_id_form_id_key ON public.form_drafts USING btree (user_id, form_id)
