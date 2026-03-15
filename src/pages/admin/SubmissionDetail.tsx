@@ -7,6 +7,7 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
 import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { ShareFormDialog } from '@/components/share/ShareFormDialog'
+import { downloadSubmissionPDF } from '@/lib/documentGenerator'
 
 export default function SubmissionDetail() {
   const { id } = useParams()
@@ -21,7 +22,9 @@ export default function SubmissionDetail() {
   }
 
   const handlePrint = () => {
-    window.print()
+    if (submission) {
+      downloadSubmissionPDF(submission)
+    }
   }
 
   const rawData = JSON.stringify(submission, null, 2)
@@ -52,9 +55,9 @@ export default function SubmissionDetail() {
               {viewHtml ? 'Ver Formatado' : 'Exportar Dados'}
             </span>
           </Button>
-          <Button onClick={handlePrint} className="flex-1 sm:flex-none">
+          <Button onClick={handlePrint} className="flex-1 sm:flex-none bg-primary text-white">
             <Printer className="h-4 w-4 mr-2" />
-            Gerar PDF
+            Baixar PDF
           </Button>
         </div>
       </div>

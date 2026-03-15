@@ -28,6 +28,7 @@ import { EmailSettingsDialog } from '@/components/admin/EmailSettingsDialog'
 import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
 import { SubmissionStatus } from '@/types'
 import { cn } from '@/lib/utils'
+import { downloadSubmissionPDF } from '@/lib/documentGenerator'
 
 const getStatusBadge = (status: string) => {
   switch (status) {
@@ -382,7 +383,16 @@ export default function SubmissionsList() {
                       </Select>
                     </TableCell>
                     <TableCell className="text-right">
-                      <div className="flex items-center justify-end gap-2">
+                      <div className="flex items-center justify-end gap-1 sm:gap-2">
+                        <Button
+                          variant="ghost"
+                          size="sm"
+                          onClick={() => downloadSubmissionPDF(sub)}
+                          title="Baixar Arquivo PDF"
+                        >
+                          <Download className="h-4 w-4 xl:mr-2" />
+                          <span className="hidden xl:inline">PDF</span>
+                        </Button>
                         <ShareFormDialog id={sub.id}>
                           <Button
                             variant="ghost"

@@ -97,6 +97,7 @@ export default function ClientForm() {
   const activeStepId = visibleSteps[currentIndex].id
 
   const handleNext = () => {
+    // Sistema valida dados - Automatic Server/Client-side validation
     if (activeStepId === 'company') {
       if (!company.tradeName || !company.email) {
         toast({
@@ -110,6 +111,46 @@ export default function ClientForm() {
         toast({
           title: 'Campo Obrigatório',
           description: 'Preencha ao menos a 1ª opção de razão social.',
+          variant: 'destructive',
+        })
+        return
+      }
+    }
+
+    if (activeStepId === 'partners' && company.type !== 'mei') {
+      if (partners.length === 0) {
+        toast({
+          title: 'Campo Obrigatório',
+          description: 'Adicione pelo menos um sócio.',
+          variant: 'destructive',
+        })
+        return
+      }
+      const hasInvalid = partners.some((p) => !p.name || !p.cpf || !p.sharePercentage)
+      if (hasInvalid) {
+        toast({
+          title: 'Dados Incompletos',
+          description: 'Preencha Nome, CPF e Participação para todos os sócios.',
+          variant: 'destructive',
+        })
+        return
+      }
+      const totalShare = partners.reduce((acc, p) => acc + (Number(p.sharePercentage) || 0), 0)
+      if (totalShare !== 100) {
+        toast({
+          title: 'Participação Inválida',
+          description: `A soma das participações societárias deve ser exatamente 100%. Atualmente: ${totalShare}%.`,
+          variant: 'destructive',
+        })
+        return
+      }
+    }
+
+    if (activeStepId === 'activity') {
+      if (!activity.mainCnae || !activity.businessAddress || !activity.description) {
+        toast({
+          title: 'Dados Incompletos',
+          description: 'CNAE Principal, Endereço e Descrição são obrigatórios.',
           variant: 'destructive',
         })
         return
@@ -230,7 +271,7 @@ export default function ClientForm() {
         )}
       </div>
 
-      <div className="fixed sm:static bottom-0 left-0 right-0 bg-background/95 sm:bg-transparent backdrop-blur-md sm:backdrop-blur-none z-50 p-4 sm:p-0 pt-4 sm:pt-8 border-t border-border mt-8 flex justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] sm:shadow-none">
+      <div className="fixed sm:static bottom-0 left-0 right-0 bg-background/95 sm:bg-transparent backdrop-blur-md sm:bg-transparent z-50 p-4 sm:p-0 pt-4 sm:pt-8 border-t border-border mt-8 flex justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] sm:shadow-none">
         <Button variant="outline" onClick={handlePrev} disabled={currentIndex === 0}>
           <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
         </Button>

@@ -1,6 +1,15 @@
 import { useState } from 'react'
 import { useNavigate, useSearchParams, Link } from 'react-router-dom'
-import { PlusCircle, Link as LinkIcon, Eye, Sparkles, Copy, Search, RefreshCw } from 'lucide-react'
+import {
+  PlusCircle,
+  Link as LinkIcon,
+  Eye,
+  Sparkles,
+  Copy,
+  Search,
+  RefreshCw,
+  Download,
+} from 'lucide-react'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs'
@@ -18,6 +27,7 @@ import { useAppStore } from '@/store/AppContext'
 import { useToast } from '@/hooks/use-toast'
 import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
 import { cn } from '@/lib/utils'
+import { downloadSubmissionPDF } from '@/lib/documentGenerator'
 
 export default function QuickActions() {
   const navigate = useNavigate()
@@ -222,12 +232,23 @@ export default function QuickActions() {
                           {new Date(sub.createdAt).toLocaleDateString('pt-BR')}
                         </TableCell>
                         <TableCell className="text-right">
-                          <Button variant="ghost" size="sm" asChild>
-                            <Link to={`/admin/${sub.id}`}>
-                              <Eye className="w-4 h-4 sm:mr-2" />
-                              <span className="hidden sm:inline">Visualizar</span>
-                            </Link>
-                          </Button>
+                          <div className="flex justify-end items-center gap-1 sm:gap-2">
+                            <Button
+                              variant="ghost"
+                              size="sm"
+                              onClick={() => downloadSubmissionPDF(sub)}
+                              title="Baixar Arquivo PDF"
+                            >
+                              <Download className="w-4 h-4 sm:mr-2" />
+                              <span className="hidden sm:inline">PDF</span>
+                            </Button>
+                            <Button variant="ghost" size="sm" asChild>
+                              <Link to={`/admin/${sub.id}`}>
+                                <Eye className="w-4 h-4 sm:mr-2" />
+                                <span className="hidden sm:inline">Visualizar</span>
+                              </Link>
+                            </Button>
+                          </div>
                         </TableCell>
                       </TableRow>
                     ))
