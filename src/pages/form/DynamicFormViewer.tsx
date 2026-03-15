@@ -7,7 +7,7 @@ import { RadioGroup, RadioGroupItem } from '@/components/ui/radio-group'
 import { Textarea } from '@/components/ui/textarea'
 import { Card, CardContent } from '@/components/ui/card'
 import { supabase } from '@/lib/supabase/client'
-import { ChevronRight, ChevronLeft, Check, Loader2 } from 'lucide-react'
+import { ChevronRight, ChevronLeft, Check, Loader2, UploadCloud } from 'lucide-react'
 import { useToast } from '@/hooks/use-toast'
 import { useAuth } from '@/hooks/use-auth'
 import { cn } from '@/lib/utils'
@@ -21,9 +21,10 @@ interface FormDef {
       title: string
       questions: Array<{
         id: string
-        type: 'text' | 'textarea' | 'choice'
+        type: 'text' | 'textarea' | 'choice' | 'file' | 'upload'
         label: string
         options?: string[]
+        multiple?: boolean
         logic?: { if: string; goTo: string } | null
         required?: boolean
         validation?: {
@@ -52,10 +53,12 @@ const validateQuestion = (q: any, value: string | undefined) => {
 
 export default function DynamicFormViewer({ formDef }: { formDef: FormDef }) {
   const [answers, setAnswers] = useState<Record<string, string>>({})
+  const [files, setFiles] = useState<Record<string, File[]>>({})
   const [currentSectionId, setCurrentSectionId] = useState<string>(formDef.schema.sections[0]?.id)
   const [history, setHistory] = useState<string[]>([])
   const [touched, setTouched] = useState<Record<string, boolean>>({})
   const [isSubmitting, setIsSubmitting] = useState(false)
+  const [uploadStatus, setUploadStatus] = useState<string>('')
   const [isLoadingDraft, setIsLoadingDraft] = useState(true)
   const [hasInitialized, setHasInitialized] = useState(false)
 
@@ -81,7 +84,17 @@ export default function DynamicFormViewer({ formDef }: { formDef: FormDef }) {
 
         if (data && !error && mounted) {
           const draftData = data.data as any
-          if (draftData.answers) setAnswers(draftData.answers)
+          if (draftData.answers) {
+            const restoredAnswers = { ...draftData.answers }
+            formDef.schema.sections.forEach((s) => {
+              s.questions.forEach((q) => {
+                if (q.type === 'file' || q.type === 'upload') {
+                  delete restoredAnswers[q.id]
+                }
+              })
+            })
+            setAnswers(restoredAnswers)
+          }
           if (
             draftData.currentSectionId &&
             formDef.schema.sections.some((s) => s.id === draftData.currentSectionId)
@@ -215,16 +228,68 @@ export default function DynamicFormViewer({ formDef }: { formDef: FormDef }) {
 
   const handleSubmit = async () => {
     setIsSubmitting(true)
+    setUploadStatus('Preparando envio...')
     try {
       const now = new Date()
       const protocol = `DYN-${now.getFullYear()}${String(now.getMonth() + 1).padStart(2, '0')}${String(now.getDate()).padStart(2, '0')}-${String(Math.floor(Math.random() * 10000)).padStart(4, '0')}`
+      const submissionId = crypto.randomUUID()
 
-      const { error } = await supabase.from('form_submissions').insert({
+      const uploadedUrls: Record<string, any> = {}
+      let totalFiles = 0
+      Object.values(files).forEach((list) => {
+        totalFiles += list.length
+      })
+      let uploadedCount = 0
+
+      for (const [qId, fileList] of Object.entries(files)) {
+        const urls: string[] = []
+        for (const file of fileList) {
+          uploadedCount++
+          setUploadStatus(`Enviando arquivo ${uploadedCount} de ${totalFiles}...`)
+          const safeName = file.name.replace(/[^a-zA-Z0-9.-]/g, '_')
+          const filePath = `forms/${formDef.id}/${submissionId}/${safeName}`
+
+          const { error: uploadError } = await supabase.storage
+            .from('documents')
+            .upload(filePath, file)
+          if (!uploadError) {
+            await supabase.from('generated_documents').insert({
+              submission_id: submissionId,
+              file_path: filePath,
+            })
+            const { data: urlData } = supabase.storage.from('documents').getPublicUrl(filePath)
+            urls.push(urlData.publicUrl)
+          } else {
+            toast({
+              title: 'Erro no upload',
+              description: `Não foi possível fazer upload do arquivo ${file.name}`,
+              variant: 'destructive',
+            })
+          }
+        }
+        if (urls.length > 0) {
+          uploadedUrls[qId] = urls.length === 1 ? urls[0] : urls
+        }
+      }
+
+      setUploadStatus('Finalizando...')
+      const finalAnswers = { ...answers, ...uploadedUrls }
+
+      const dynamicAnswers = formDef.schema.sections
+        .flatMap((s) => s.questions)
+        .map((q) => ({
+          label: q.label,
+          value: finalAnswers[q.id],
+        }))
+
+      const { error: insertError } = await supabase.from('form_submissions').insert({
+        id: submissionId,
         form_id: formDef.id,
         data: {
-          clientName: answers[currentSection?.questions[0]?.id] || 'Respostas do Form',
+          clientName: finalAnswers[currentSection?.questions[0]?.id] || 'Respostas do Form',
           protocol,
-          answers,
+          answers: finalAnswers,
+          dynamicAnswers,
           type: 'dynamic',
           status: 'pending',
           createdAt: now.toISOString(),
@@ -232,7 +297,7 @@ export default function DynamicFormViewer({ formDef }: { formDef: FormDef }) {
         },
       })
 
-      if (error) throw error
+      if (insertError) throw insertError
 
       if (user) {
         await supabase.from('form_drafts').delete().eq('user_id', user.id).eq('form_id', formDef.id)
@@ -246,12 +311,12 @@ export default function DynamicFormViewer({ formDef }: { formDef: FormDef }) {
     } catch (err) {
       toast({
         title: 'Erro ao processar',
-        description:
-          'Não foi possível enviar o formulário. Seus dados continuam salvos e você pode tentar novamente.',
+        description: 'Não foi possível enviar o formulário. Seus dados continuam salvos.',
         variant: 'destructive',
       })
     } finally {
       setIsSubmitting(false)
+      setUploadStatus('')
     }
   }
 
@@ -351,6 +416,62 @@ export default function DynamicFormViewer({ formDef }: { formDef: FormDef }) {
                     />
                   )}
 
+                  {(q.type === 'file' || q.type === 'upload') && (
+                    <div className="space-y-3">
+                      <div className="relative">
+                        <Input
+                          type="file"
+                          multiple={q.multiple}
+                          onChange={(e) => {
+                            if (e.target.files) {
+                              const selectedFiles = Array.from(e.target.files)
+                              setFiles((prev) => ({ ...prev, [q.id]: selectedFiles }))
+                              setAnswers((prev) => ({
+                                ...prev,
+                                [q.id]: selectedFiles.map((f) => f.name).join(', '),
+                              }))
+                              setTouched((prev) => ({ ...prev, [q.id]: true }))
+                            }
+                          }}
+                          className={cn(
+                            'absolute inset-0 w-full h-full opacity-0 cursor-pointer z-10',
+                          )}
+                        />
+                        <div
+                          className={cn(
+                            'flex flex-col items-center justify-center border-2 border-dashed rounded-lg p-6 transition-colors',
+                            showError
+                              ? 'border-destructive bg-destructive/5'
+                              : 'border-muted-foreground/25 hover:bg-slate-50',
+                            files[q.id]?.length ? 'bg-slate-50 border-primary/20' : '',
+                          )}
+                        >
+                          <UploadCloud className="w-8 h-8 text-muted-foreground mb-2" />
+                          <p className="text-sm font-medium text-slate-700">
+                            Clique para selecionar ou arraste arquivos
+                          </p>
+                          <p className="text-xs text-muted-foreground mt-1">
+                            PDF, JPG, PNG {q.multiple ? '(Múltiplos permitidos)' : ''}
+                          </p>
+                        </div>
+                      </div>
+
+                      {files[q.id] && files[q.id].length > 0 && (
+                        <div className="space-y-2 mt-3 bg-slate-50 p-3 rounded-md border">
+                          {files[q.id].map((f, i) => (
+                            <div key={i} className="flex items-center gap-2 text-sm text-slate-700">
+                              <Check className="w-4 h-4 text-success shrink-0" />
+                              <span className="truncate flex-1">{f.name}</span>
+                              <span className="text-xs text-muted-foreground shrink-0">
+                                {(f.size / 1024 / 1024).toFixed(2)} MB
+                              </span>
+                            </div>
+                          ))}
+                        </div>
+                      )}
+                    </div>
+                  )}
+
                   {q.type === 'choice' && q.options && (
                     <RadioGroup
                       value={answers[q.id] || ''}
@@ -398,7 +519,7 @@ export default function DynamicFormViewer({ formDef }: { formDef: FormDef }) {
         </Card>
       </div>
 
-      <div className="fixed sm:static bottom-0 left-0 right-0 bg-background/95 sm:bg-transparent backdrop-blur-md sm:bg-transparent z-50 p-4 sm:p-0 pt-4 sm:pt-8 border-t border-border mt-8 flex justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] sm:shadow-none">
+      <div className="fixed sm:static bottom-0 left-0 right-0 bg-background/95 sm:bg-transparent backdrop-blur-md sm:bg-transparent z-50 p-4 sm:p-0 pt-4 sm:pt-8 border-t border-border mt-8 flex justify-between shadow-[0_-5px_15px_rgba(0,0,0,0.05)] sm:shadow-none items-center">
         <Button
           variant="outline"
           onClick={handlePrev}
@@ -408,24 +529,31 @@ export default function DynamicFormViewer({ formDef }: { formDef: FormDef }) {
           <ChevronLeft className="w-4 h-4 mr-2" /> Voltar
         </Button>
 
-        {isLast ? (
-          <Button
-            onClick={handleSubmit}
-            disabled={isSubmitting || currentSectionHasErrors}
-            className="bg-primary-dynamic text-white hover:opacity-90 shadow-md transition-all active:scale-95 border-none font-medium disabled:opacity-50"
-          >
-            {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
-            Finalizar <Check className="w-4 h-4 ml-2" />
-          </Button>
-        ) : (
-          <Button
-            onClick={handleNext}
-            disabled={isSubmitting || currentSectionHasErrors}
-            className="bg-primary-dynamic text-white hover:opacity-90 border-none font-medium disabled:opacity-50"
-          >
-            Próximo <ChevronRight className="w-4 h-4 ml-2" />
-          </Button>
-        )}
+        <div className="flex items-center gap-3">
+          {isSubmitting && uploadStatus && (
+            <span className="text-xs font-medium text-muted-foreground animate-pulse hidden sm:inline-block">
+              {uploadStatus}
+            </span>
+          )}
+          {isLast ? (
+            <Button
+              onClick={handleSubmit}
+              disabled={isSubmitting || currentSectionHasErrors}
+              className="bg-primary-dynamic text-white hover:opacity-90 shadow-md transition-all active:scale-95 border-none font-medium disabled:opacity-50"
+            >
+              {isSubmitting && <Loader2 className="w-4 h-4 mr-2 animate-spin" />}
+              Finalizar <Check className="w-4 h-4 ml-2" />
+            </Button>
+          ) : (
+            <Button
+              onClick={handleNext}
+              disabled={isSubmitting || currentSectionHasErrors}
+              className="bg-primary-dynamic text-white hover:opacity-90 border-none font-medium disabled:opacity-50"
+            >
+              Próximo <ChevronRight className="w-4 h-4 ml-2" />
+            </Button>
+          )}
+        </div>
       </div>
     </div>
   )

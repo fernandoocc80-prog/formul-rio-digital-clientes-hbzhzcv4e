@@ -43,11 +43,14 @@ export interface Submission {
   status: SubmissionStatus
   createdAt: string
   updatedAt: string
-  company: CompanyData
-  partners: Partner[]
-  activity: ActivityData
-  documents: DocumentItem[]
+  company?: CompanyData
+  partners?: Partner[]
+  activity?: ActivityData
+  documents?: DocumentItem[]
   signature?: string
+  answers?: Record<string, any>
+  dynamicAnswers?: Array<{ label: string; value: any }>
+  type?: string
 }
 
 export type PartialSubmission = Partial<Submission>

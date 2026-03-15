@@ -362,6 +362,8 @@ export const Constants = {
 //   Policy "Auth users can view submissions" (SELECT, PERMISSIVE) roles={public}
 //     USING: (auth.role() = 'authenticated'::text)
 // Table: forms
+//   Policy "Auth users can delete forms" (DELETE, PERMISSIVE) roles={public}
+//     USING: (auth.role() = 'authenticated'::text)
 //   Policy "Public can read forms" (SELECT, PERMISSIVE) roles={public}
 //     USING: true
 // Table: generated_documents
