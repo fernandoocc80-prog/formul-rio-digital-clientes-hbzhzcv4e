@@ -43,18 +43,24 @@ export type Database = {
           created_at: string
           description: string | null
           id: string
+          schema: Json | null
+          settings: Json | null
           title: string
         }
         Insert: {
           created_at?: string
           description?: string | null
           id?: string
+          schema?: Json | null
+          settings?: Json | null
           title: string
         }
         Update: {
           created_at?: string
           description?: string | null
           id?: string
+          schema?: Json | null
+          settings?: Json | null
           title?: string
         }
         Relationships: []
@@ -269,6 +275,8 @@ export const Constants = {
 //   title: text (not null)
 //   description: text (nullable)
 //   created_at: timestamp with time zone (not null, default: now())
+//   schema: jsonb (nullable)
+//   settings: jsonb (nullable)
 // Table: generated_documents
 //   id: uuid (not null, default: gen_random_uuid())
 //   submission_id: uuid (nullable)
