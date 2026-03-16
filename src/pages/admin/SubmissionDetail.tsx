@@ -69,7 +69,9 @@ export default function SubmissionDetail() {
               try {
                 const parts = new URL(val).pathname.split('/')
                 cleanName = decodeURIComponent(parts[parts.length - 1])
-              } catch (e) {}
+              } catch (e) {
+                // ignore
+              }
               list.push({
                 id: `json-${i}-${Math.random()}`,
                 name: cleanName,
@@ -94,7 +96,9 @@ export default function SubmissionDetail() {
               try {
                 const parts = new URL(obj).pathname.split('/')
                 cleanName = decodeURIComponent(parts[parts.length - 1])
-              } catch (e) {}
+              } catch (e) {
+                // ignore
+              }
               list.push({
                 id: `gen-${Math.random()}`,
                 name: cleanName,
