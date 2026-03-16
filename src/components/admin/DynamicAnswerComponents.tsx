@@ -12,19 +12,21 @@ export const SecureAttachmentLink = ({ value }: { value: string }) => {
 
   if (isImageUrl(url)) {
     return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-2">
-        <img
-          src={url}
-          alt="Anexo"
-          className="max-w-xs max-h-48 rounded border border-border shadow-sm object-cover hover:opacity-90 transition-opacity"
-        />
+      <a href={url || undefined} target="_blank" rel="noopener noreferrer" className="block mt-2">
+        {url ? (
+          <img
+            src={url}
+            alt="Anexo"
+            className="max-w-xs max-h-48 rounded border border-border shadow-sm object-cover hover:opacity-90 transition-opacity"
+          />
+        ) : null}
       </a>
     )
   }
 
   return (
     <a
-      href={url}
+      href={url || undefined}
       target="_blank"
       rel="noopener noreferrer"
       className="text-primary hover:underline break-all inline-flex items-center gap-2 mt-1 bg-primary/5 px-3 py-2 rounded-md border border-primary/20 hover:bg-primary/10 transition-colors"
@@ -60,6 +62,14 @@ export const SecureSignature = ({ src }: { src: string }) => {
 
   if (loading) {
     return <div className="animate-pulse h-24 w-64 bg-slate-200 mx-auto rounded"></div>
+  }
+
+  if (!url) {
+    return (
+      <div className="h-24 w-full max-w-sm mx-auto flex items-center justify-center text-xs text-muted-foreground bg-slate-50 rounded border border-dashed">
+        Assinatura não disponível
+      </div>
+    )
   }
 
   return (
