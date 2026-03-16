@@ -47,8 +47,8 @@ export default function SubmissionDetail() {
         const docDef = submission.documents.find(
           (d: any) =>
             d.fileName === cleanName ||
-            rawName.includes(d.fileName) ||
-            d.fileName.includes(cleanName),
+            (d.fileName && rawName.includes(d.fileName)) ||
+            (d.fileName && d.fileName.includes(cleanName)),
         )
         if (docDef) label = docDef.label
       }
