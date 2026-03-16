@@ -374,7 +374,7 @@ export const Constants = {
 // Table: generated_documents
 //   Policy "Auth users can view documents" (SELECT, PERMISSIVE) roles={public}
 //     USING: (auth.role() = 'authenticated'::text)
-//   Policy "Service role can insert documents via edge function" (INSERT, PERMISSIVE) roles={public}
+//   Policy "Public can insert generated documents" (INSERT, PERMISSIVE) roles={public}
 //     WITH CHECK: true
 // Table: profiles
 //   Policy "Auth users can update profiles" (UPDATE, PERMISSIVE) roles={public}

@@ -8,13 +8,16 @@ import { Label } from '@/components/ui/label'
 import { Card, CardContent, CardDescription, CardHeader, CardTitle } from '@/components/ui/card'
 import { Alert, AlertDescription, AlertTitle } from '@/components/ui/alert'
 import { useToast } from '@/hooks/use-toast'
-import { Building2, AlertCircle, Loader2 } from 'lucide-react'
+import { Building2, AlertCircle, Loader2, Info } from 'lucide-react'
 
 export default function Login() {
   const [email, setEmail] = useState('')
   const [password, setPassword] = useState('')
   const [isLoading, setIsLoading] = useState(false)
   const [errorMsg, setErrorMsg] = useState<string | null>(null)
+  const [errorVariant, setErrorVariant] = useState<'destructive' | 'warning' | 'default'>(
+    'destructive',
+  )
 
   const { signIn } = useAuth()
   const { clearCache, users } = useAppStore()
@@ -84,17 +87,31 @@ export default function Login() {
           (res.error as any).code === 'over_email_send_rate_limit' ||
           errMsg.includes('too many requests')
 
+        const isEmailNotConfirmed =
+          errMsg.includes('email not confirmed') || errMsg.includes('e-mail não confirmado')
+
         if (isRateLimit) {
           const msg =
             'Limite de tentativas atingido. Por favor, aguarde alguns minutos antes de tentar novamente.'
           setErrorMsg(msg)
+          setErrorVariant('destructive')
           toast({
             title: 'Muitas tentativas',
             description: msg,
             variant: 'destructive',
           })
+        } else if (isEmailNotConfirmed) {
+          const msg =
+            'Por favor, verifique seu e-mail para confirmar seu cadastro antes de acessar o sistema.'
+          setErrorMsg(msg)
+          setErrorVariant('warning')
+          toast({
+            title: 'E-mail não confirmado',
+            description: msg,
+          })
         } else if (errMsg.includes('invalid login credentials') || errMsg.includes('credenciais')) {
           setErrorMsg('Credenciais inválidas. Verifique seu e-mail e senha e tente novamente.')
+          setErrorVariant('destructive')
           toast({
             title: 'Credenciais inválidas',
             description: 'O e-mail ou a senha estão incorretos.',
@@ -107,6 +124,7 @@ export default function Login() {
         ) {
           const msg = 'Verifique sua conexão com a internet e tente novamente.'
           setErrorMsg(msg)
+          setErrorVariant('destructive')
           toast({
             title: 'Falha na conexão',
             description: msg,
@@ -114,6 +132,7 @@ export default function Login() {
           })
         } else {
           setErrorMsg('Não foi possível realizar o login. Tente novamente mais tarde.')
+          setErrorVariant('destructive')
         }
       }
     } catch (err: any) {
@@ -121,14 +140,27 @@ export default function Login() {
       const isRateLimit =
         errMsg.includes('rate limit') || err?.status === 429 || errMsg.includes('too many requests')
 
+      const isEmailNotConfirmed =
+        errMsg.includes('email not confirmed') || errMsg.includes('e-mail não confirmado')
+
       if (isRateLimit) {
         const msg =
           'Limite de tentativas atingido. Por favor, aguarde alguns minutos antes de tentar novamente.'
         setErrorMsg(msg)
+        setErrorVariant('destructive')
         toast({
           title: 'Muitas tentativas',
           description: msg,
           variant: 'destructive',
+        })
+      } else if (isEmailNotConfirmed) {
+        const msg =
+          'Por favor, verifique seu e-mail para confirmar seu cadastro antes de acessar o sistema.'
+        setErrorMsg(msg)
+        setErrorVariant('warning')
+        toast({
+          title: 'E-mail não confirmado',
+          description: msg,
         })
       } else if (
         errMsg.includes('failed to fetch') ||
@@ -137,6 +169,7 @@ export default function Login() {
       ) {
         const msg = 'Verifique sua conexão com a internet e tente novamente.'
         setErrorMsg(msg)
+        setErrorVariant('destructive')
         toast({
           title: 'Falha na conexão',
           description: msg,
@@ -144,6 +177,7 @@ export default function Login() {
         })
       } else {
         setErrorMsg('Ocorreu um erro inesperado ao tentar fazer login. Tente novamente.')
+        setErrorVariant('destructive')
       }
     } finally {
       setIsLoading(false)
@@ -171,11 +205,15 @@ export default function Login() {
         <CardContent>
           {errorMsg && (
             <Alert
-              variant="destructive"
+              variant={errorVariant}
               className="mb-4 animate-in fade-in zoom-in-95 duration-200"
             >
-              <AlertCircle className="h-4 w-4" />
-              <AlertTitle>Atenção</AlertTitle>
+              {errorVariant === 'warning' ? (
+                <Info className="h-4 w-4" />
+              ) : (
+                <AlertCircle className="h-4 w-4" />
+              )}
+              <AlertTitle>{errorVariant === 'warning' ? 'Atenção' : 'Erro'}</AlertTitle>
               <AlertDescription>{errorMsg}</AlertDescription>
             </Alert>
           )}
