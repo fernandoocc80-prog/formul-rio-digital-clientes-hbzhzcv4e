@@ -11,11 +11,13 @@ export const SecureAttachmentLink = ({ value }: { value: string }) => {
   const { url, loading } = useSignedUrl(value)
   const [previewOpen, setPreviewOpen] = useState(false)
 
-  if (loading) {
+  if (loading && !url) {
     return <div className="animate-pulse h-10 w-32 bg-slate-200 rounded mt-2"></div>
   }
 
-  if (!url) {
+  const isAvailable = value || url
+
+  if (!isAvailable) {
     return <span className="text-sm text-destructive mt-1 block">Anexo indisponível</span>
   }
 
@@ -26,14 +28,16 @@ export const SecureAttachmentLink = ({ value }: { value: string }) => {
     name = decodeURIComponent(parts[parts.length - 1])
   } catch (e) {
     try {
-      const parts = url.split('?')[0].split('/')
-      name = decodeURIComponent(parts[parts.length - 1])
+      if (url) {
+        const parts = url.split('?')[0].split('/')
+        name = decodeURIComponent(parts[parts.length - 1])
+      }
     } catch (err) {
       name = 'Documento Anexo'
     }
   }
 
-  if (isImageUrl(value) || isImageUrl(url)) {
+  if (isImageUrl(value) || (url && isImageUrl(url))) {
     return (
       <>
         <button
@@ -43,11 +47,17 @@ export const SecureAttachmentLink = ({ value }: { value: string }) => {
           title="Clique para visualizar em tela cheia"
         >
           <div className="relative inline-block">
-            <img
-              src={url}
-              alt="Anexo"
-              className="max-w-xs max-h-48 rounded border border-border shadow-sm object-cover group-hover:opacity-90 transition-opacity"
-            />
+            {url ? (
+              <img
+                src={url}
+                alt="Anexo"
+                className="max-w-xs max-h-48 rounded border border-border shadow-sm object-cover group-hover:opacity-90 transition-opacity"
+              />
+            ) : (
+              <div className="w-48 h-32 bg-slate-100 flex items-center justify-center rounded border shadow-sm">
+                <span className="text-xs text-muted-foreground">Imagem</span>
+              </div>
+            )}
             <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded flex items-center justify-center opacity-0 group-hover:opacity-100">
               <div className="bg-background/90 text-foreground p-2 rounded-full shadow-sm">
                 <Eye className="w-5 h-5" />
@@ -56,7 +66,7 @@ export const SecureAttachmentLink = ({ value }: { value: string }) => {
           </div>
         </button>
         <DocumentPreviewDialog
-          url={url}
+          pathOrUrl={value}
           name={name}
           open={previewOpen}
           onOpenChange={setPreviewOpen}
@@ -75,23 +85,25 @@ export const SecureAttachmentLink = ({ value }: { value: string }) => {
         >
           <Eye className="w-4 h-4 shrink-0" />
           <span className="text-sm font-medium">
-            Visualizar {isPdfUrl(value) || isPdfUrl(url) ? 'PDF' : 'Documento'}
+            Visualizar {isPdfUrl(value) || (url && isPdfUrl(url)) ? 'PDF' : 'Documento'}
           </span>
         </button>
-        <Button
-          asChild
-          variant="outline"
-          size="sm"
-          className="h-[38px] text-muted-foreground hover:text-foreground"
-        >
-          <a href={url} target="_blank" rel="noopener noreferrer" title="Abrir em nova aba">
-            <ExternalLink className="w-4 h-4 shrink-0" />
-            <span className="sr-only sm:not-sr-only sm:ml-2">Abrir</span>
-          </a>
-        </Button>
+        {url && (
+          <Button
+            asChild
+            variant="outline"
+            size="sm"
+            className="h-[38px] text-muted-foreground hover:text-foreground"
+          >
+            <a href={url} target="_blank" rel="noopener noreferrer" title="Abrir em nova aba">
+              <ExternalLink className="w-4 h-4 shrink-0" />
+              <span className="sr-only sm:not-sr-only sm:ml-2">Abrir</span>
+            </a>
+          </Button>
+        )}
       </div>
       <DocumentPreviewDialog
-        url={url}
+        pathOrUrl={value}
         name={name}
         open={previewOpen}
         onOpenChange={setPreviewOpen}

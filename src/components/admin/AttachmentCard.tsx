@@ -4,6 +4,7 @@ import { useToast } from '@/hooks/use-toast'
 import { useSignedUrl } from '@/hooks/use-signed-url'
 import { Eye, Download, FileText, Image as ImageIcon, File, Loader2 } from 'lucide-react'
 import { DocumentPreviewDialog } from './DocumentPreviewDialog'
+import { supabase } from '@/lib/supabase/client'
 
 export interface Attachment {
   id: string
@@ -24,24 +25,59 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
   const isPending = !attachment.pathOrUrl
 
   const handleDownloadClick = async () => {
-    if (!url) return
+    if (!attachment.pathOrUrl) return
     setIsDownloading(true)
     try {
-      const res = await fetch(url)
-      if (!res.ok) throw new Error('Download failed')
-      const blob = await res.blob()
-      const objectUrl = URL.createObjectURL(blob)
-      const a = document.createElement('a')
-      a.href = objectUrl
-      a.download = attachment.name || 'documento'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
-      URL.revokeObjectURL(objectUrl)
+      let blob: Blob | null = null
+      const pathOrUrl = attachment.pathOrUrl
+
+      if (pathOrUrl.startsWith('http')) {
+        if (pathOrUrl.includes('/storage/v1/object/')) {
+          let bucket = 'documents'
+          let filePath = pathOrUrl
+          if (pathOrUrl.includes('/storage/v1/object/public/')) {
+            const urlObj = new URL(pathOrUrl)
+            const pathParts = urlObj.pathname.split('/storage/v1/object/public/')[1]
+            if (pathParts) {
+              bucket = pathParts.split('/')[0]
+              filePath = decodeURIComponent(pathParts.substring(bucket.length + 1))
+            }
+          } else if (pathOrUrl.includes('/storage/v1/object/authenticated/')) {
+            const urlObj = new URL(pathOrUrl)
+            const pathParts = urlObj.pathname.split('/storage/v1/object/authenticated/')[1]
+            if (pathParts) {
+              bucket = pathParts.split('/')[0]
+              filePath = decodeURIComponent(pathParts.substring(bucket.length + 1))
+            }
+          }
+          const { data, error } = await supabase.storage.from(bucket).download(filePath)
+          if (error) throw error
+          if (data) blob = data
+        } else {
+          const res = await fetch(pathOrUrl)
+          if (!res.ok) throw new Error('Download failed')
+          blob = await res.blob()
+        }
+      } else {
+        const { data, error } = await supabase.storage.from('documents').download(pathOrUrl)
+        if (error) throw error
+        if (data) blob = data
+      }
+
+      if (blob) {
+        const objectUrl = URL.createObjectURL(blob)
+        const a = document.createElement('a')
+        a.href = objectUrl
+        a.download = attachment.name || 'documento'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+      }
     } catch (e) {
       toast({
         title: 'Erro no download',
-        description: 'Não foi possível baixar o arquivo. Ele pode estar corrompido ou inacessível.',
+        description: 'Não foi possível baixar o arquivo de forma segura.',
         variant: 'destructive',
       })
     } finally {
@@ -76,9 +112,9 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
             <span className="text-xs font-medium text-muted-foreground bg-muted px-2 py-1 rounded">
               Pendente
             </span>
-          ) : loading ? (
+          ) : loading && !url ? (
             <Loader2 className="h-5 w-5 animate-spin text-muted-foreground mr-2" />
-          ) : url ? (
+          ) : (
             <>
               <Button
                 variant="ghost"
@@ -104,22 +140,16 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
                 )}
               </Button>
             </>
-          ) : (
-            <span className="text-xs font-medium text-destructive bg-destructive/10 px-2 py-1 rounded">
-              Erro
-            </span>
           )}
         </div>
       </div>
 
-      {url && (
-        <DocumentPreviewDialog
-          url={url}
-          name={attachment.name || attachment.label}
-          open={previewOpen}
-          onOpenChange={setPreviewOpen}
-        />
-      )}
+      <DocumentPreviewDialog
+        pathOrUrl={attachment.pathOrUrl}
+        name={attachment.name || attachment.label}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+      />
     </>
   )
 }
