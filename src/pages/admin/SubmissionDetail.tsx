@@ -1,6 +1,6 @@
-import { useState, useEffect } from 'react'
+import { useState, useEffect, useMemo } from 'react'
 import { useParams, useNavigate } from 'react-router-dom'
-import { Printer, Code, ArrowLeft, CheckCircle2, Share2, Loader2, Paperclip } from 'lucide-react'
+import { Printer, Code, ArrowLeft, Share2, Loader2 } from 'lucide-react'
 import { useAppStore } from '@/store/AppContext'
 import { Button } from '@/components/ui/button'
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card'
@@ -8,127 +8,8 @@ import { Separator } from '@/components/ui/separator'
 import { Badge } from '@/components/ui/badge'
 import { ShareFormDialog } from '@/components/share/ShareFormDialog'
 import { supabase } from '@/lib/supabase/client'
-
-const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i.test(url)
-
-const useSignedUrl = (value: string) => {
-  const [url, setUrl] = useState<string>(value)
-  const [loading, setLoading] = useState(false)
-  const navigate = useNavigate()
-
-  useEffect(() => {
-    let isMounted = true
-
-    const getUrl = async () => {
-      if (typeof value === 'string' && value.includes('/storage/v1/object/public/')) {
-        setLoading(true)
-        try {
-          const {
-            data: { session },
-          } = await supabase.auth.getSession()
-          if (!session) {
-            navigate('/login')
-            return
-          }
-
-          const urlObj = new URL(value)
-          const pathParts = urlObj.pathname.split('/storage/v1/object/public/')[1]
-          if (pathParts) {
-            const bucket = pathParts.split('/')[0]
-            const filePath = pathParts.substring(bucket.length + 1)
-
-            const { data } = await supabase.storage
-              .from(bucket)
-              .createSignedUrl(decodeURIComponent(filePath), 3600)
-            if (data?.signedUrl && isMounted) {
-              setUrl(data.signedUrl)
-            }
-          }
-        } catch (e) {
-          console.error(e)
-        } finally {
-          if (isMounted) setLoading(false)
-        }
-      }
-    }
-
-    if (value && typeof value === 'string' && value.includes('/storage/v1/object/public/')) {
-      getUrl()
-    } else {
-      setUrl(value)
-    }
-
-    return () => {
-      isMounted = false
-    }
-  }, [value, navigate])
-
-  return { url, loading }
-}
-
-const SecureAttachmentLink = ({ value }: { value: string }) => {
-  const { url, loading } = useSignedUrl(value)
-
-  if (loading) {
-    return <div className="animate-pulse h-10 w-32 bg-slate-200 rounded mt-2"></div>
-  }
-
-  if (isImageUrl(url)) {
-    return (
-      <a href={url} target="_blank" rel="noopener noreferrer" className="block mt-2">
-        <img
-          src={url}
-          alt="Anexo"
-          className="max-w-xs max-h-48 rounded border border-border shadow-sm object-cover hover:opacity-90 transition-opacity"
-        />
-      </a>
-    )
-  }
-
-  return (
-    <a
-      href={url}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-primary hover:underline break-all inline-flex items-center gap-2 mt-1 bg-primary/5 px-3 py-2 rounded-md border border-primary/20 hover:bg-primary/10 transition-colors"
-    >
-      <Paperclip className="w-4 h-4 shrink-0" />
-      <span className="text-sm font-medium">Visualizar Documento</span>
-    </a>
-  )
-}
-
-const DynamicAnswerValue = ({ value }: { value: any }) => {
-  if (!value) return <p className="text-muted-foreground text-sm">-</p>
-
-  if (Array.isArray(value)) {
-    return (
-      <div className="flex flex-col gap-2 mt-2">
-        {value.map((v, i) => (
-          <DynamicAnswerValue key={i} value={v} />
-        ))}
-      </div>
-    )
-  }
-
-  if (typeof value === 'string' && value.startsWith('http')) {
-    return <SecureAttachmentLink value={value} />
-  }
-
-  return <p className="bg-slate-50 p-3 rounded text-sm mt-1">{String(value)}</p>
-}
-
-const SecureSignature = ({ src }: { src: string }) => {
-  const { url, loading } = useSignedUrl(src)
-
-  if (loading) {
-    return <div className="animate-pulse h-24 w-64 bg-slate-200 mx-auto rounded"></div>
-  }
-
-  return (
-    <img src={url} alt="Assinatura" className="h-24 object-contain mx-auto mix-blend-multiply" />
-  )
-}
+import { AttachmentCard, Attachment } from '@/components/admin/AttachmentCard'
+import { DynamicAnswerValue, SecureSignature } from '@/components/admin/DynamicAnswerComponents'
 
 export default function SubmissionDetail() {
   const { id } = useParams()
@@ -136,22 +17,128 @@ export default function SubmissionDetail() {
   const { getSubmission, downloadGeneratedPDF } = useAppStore()
   const [viewHtml, setViewHtml] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
+  const [dbFiles, setDbFiles] = useState<{ id: string; file_path: string }[]>([])
 
   const submission = id ? getSubmission(id) : undefined
+
+  useEffect(() => {
+    if (submission?.id) {
+      supabase
+        .from('generated_documents')
+        .select('id, file_path')
+        .eq('submission_id', submission.id)
+        .then(({ data }) => {
+          if (data) setDbFiles(data.filter((d) => d.file_path !== `${submission.id}.pdf`))
+        })
+    }
+  }, [submission?.id])
+
+  const attachments = useMemo(() => {
+    const list: Attachment[] = []
+
+    dbFiles.forEach((file) => {
+      const parts = file.file_path.split('/')
+      const rawName = parts[parts.length - 1] || 'arquivo'
+      const nameMatch = rawName.match(/^\d+_(.+)$/)
+      const cleanName = nameMatch ? nameMatch[1] : rawName
+
+      let label = 'Documento Anexo'
+      if (submission?.documents) {
+        const docDef = submission.documents.find(
+          (d: any) =>
+            d.fileName === cleanName ||
+            rawName.includes(d.fileName) ||
+            d.fileName.includes(cleanName),
+        )
+        if (docDef) label = docDef.label
+      }
+
+      list.push({ id: file.id, name: cleanName, label, pathOrUrl: file.file_path })
+    })
+
+    if (submission?.dynamicAnswers) {
+      submission.dynamicAnswers.forEach((ans: any, i: number) => {
+        const vals = Array.isArray(ans.value) ? ans.value : [ans.value]
+        vals.forEach((val: any) => {
+          if (typeof val === 'string' && (val.startsWith('http') || val.includes('/storage/'))) {
+            const alreadyAdded = list.some(
+              (a) => a.pathOrUrl && (val.includes(a.pathOrUrl) || a.pathOrUrl.includes(val)),
+            )
+            if (!alreadyAdded) {
+              let cleanName = `Anexo_${i + 1}`
+              try {
+                const parts = new URL(val).pathname.split('/')
+                cleanName = decodeURIComponent(parts[parts.length - 1])
+              } catch (e) {}
+              list.push({
+                id: `json-${i}-${Math.random()}`,
+                name: cleanName,
+                label: ans.label || 'Documento',
+                pathOrUrl: val,
+              })
+            }
+          }
+        })
+      })
+    }
+
+    if (!submission?.dynamicAnswers && list.length === 0) {
+      const traverse = (obj: any, pathLabel: string) => {
+        if (typeof obj === 'string' && (obj.startsWith('http') || obj.includes('/storage/'))) {
+          if (!obj.toLowerCase().includes('signature')) {
+            const alreadyAdded = list.some(
+              (a) => a.pathOrUrl && (obj.includes(a.pathOrUrl) || a.pathOrUrl.includes(obj)),
+            )
+            if (!alreadyAdded) {
+              let cleanName = 'Anexo'
+              try {
+                const parts = new URL(obj).pathname.split('/')
+                cleanName = decodeURIComponent(parts[parts.length - 1])
+              } catch (e) {}
+              list.push({
+                id: `gen-${Math.random()}`,
+                name: cleanName,
+                label: pathLabel || 'Documento',
+                pathOrUrl: obj,
+              })
+            }
+          }
+        } else if (typeof obj === 'object' && obj !== null) {
+          for (const key in obj) {
+            if (key === 'signature') continue
+            traverse(obj[key], isNaN(Number(key)) ? key : pathLabel)
+          }
+        }
+      }
+      traverse(submission, 'Documento')
+    }
+
+    if (submission?.documents) {
+      submission.documents.forEach((doc: any) => {
+        const exists = list.some((a) => a.name === doc.fileName || a.label === doc.label)
+        if (!exists) {
+          list.push({
+            id: doc.id,
+            name: doc.fileName || 'Pendente',
+            label: doc.label,
+            pathOrUrl: null,
+          })
+        }
+      })
+    }
+
+    return list
+  }, [dbFiles, submission])
 
   if (!submission) {
     return <div className="p-8 text-center">Registro não encontrado.</div>
   }
 
   const handlePrint = async () => {
-    if (submission) {
-      setIsDownloading(true)
-      await downloadGeneratedPDF(submission)
-      setIsDownloading(false)
-    }
+    setIsDownloading(true)
+    await downloadGeneratedPDF(submission)
+    setIsDownloading(false)
   }
-
-  const rawData = JSON.stringify(submission, null, 2)
 
   return (
     <div className="max-w-4xl mx-auto space-y-6 pb-12">
@@ -201,7 +188,7 @@ export default function SubmissionDetail() {
           </CardHeader>
           <CardContent>
             <pre className="bg-slate-900 text-slate-50 p-4 rounded-lg overflow-x-auto text-sm">
-              {rawData}
+              {JSON.stringify(submission, null, 2)}
             </pre>
           </CardContent>
         </Card>
@@ -224,30 +211,51 @@ export default function SubmissionDetail() {
           </div>
 
           {submission.type === 'dynamic' ? (
-            <section className="print-break-inside-avoid">
-              <h3 className="text-lg sm:text-xl font-semibold mb-6 text-primary border-l-4 border-primary pl-3">
-                Dados Submetidos
-              </h3>
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-6">
-                {submission.dynamicAnswers?.map((item: any, i: number) => {
-                  const isFullWidth =
-                    Array.isArray(item.value) ||
-                    (typeof item.value === 'string' &&
-                      (item.value.length > 50 || item.value.startsWith('http')))
-                  return (
-                    <div key={i} className={isFullWidth ? 'col-span-1 sm:col-span-2' : ''}>
-                      <p className="text-sm text-muted-foreground font-medium mb-1">{item.label}</p>
-                      <DynamicAnswerValue value={item.value} />
-                    </div>
-                  )
-                })}
-                {(!submission.dynamicAnswers || submission.dynamicAnswers.length === 0) && (
-                  <p className="text-muted-foreground italic col-span-2">
-                    Nenhuma resposta registrada.
-                  </p>
+            <>
+              <section className="print-break-inside-avoid">
+                <h3 className="text-lg sm:text-xl font-semibold mb-6 text-primary border-l-4 border-primary pl-3">
+                  Dados Submetidos
+                </h3>
+                <div className="grid grid-cols-1 sm:grid-cols-2 gap-y-6 gap-x-6">
+                  {submission.dynamicAnswers?.map((item: any, i: number) => {
+                    const isFullWidth =
+                      Array.isArray(item.value) ||
+                      (typeof item.value === 'string' &&
+                        (item.value.length > 50 || item.value.startsWith('http')))
+                    return (
+                      <div key={i} className={isFullWidth ? 'col-span-1 sm:col-span-2' : ''}>
+                        <p className="text-sm text-muted-foreground font-medium mb-1">
+                          {item.label}
+                        </p>
+                        <DynamicAnswerValue value={item.value} />
+                      </div>
+                    )
+                  })}
+                  {(!submission.dynamicAnswers || submission.dynamicAnswers.length === 0) && (
+                    <p className="text-muted-foreground italic col-span-2">
+                      Nenhuma resposta registrada.
+                    </p>
+                  )}
+                </div>
+              </section>
+
+              <Separator />
+
+              <section className="print-break-inside-avoid mt-8">
+                <h3 className="text-lg sm:text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
+                  Documentos Anexados
+                </h3>
+                {attachments.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {attachments.map((att) => (
+                      <AttachmentCard key={att.id} attachment={att} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground italic">Nenhum documento anexado.</p>
                 )}
-              </div>
-            </section>
+              </section>
+            </>
           ) : (
             <>
               <section>
@@ -286,18 +294,6 @@ export default function SubmissionDetail() {
                         : '-'}
                     </p>
                   </div>
-                  {(submission.company?.type === 'ltda' || submission.company?.type === 'slu') && (
-                    <div className="col-span-1 sm:col-span-2 mt-2">
-                      <p className="text-sm text-muted-foreground font-medium mb-1">
-                        Opções de Razão Social
-                      </p>
-                      <ul className="list-disc pl-5 space-y-1 text-sm">
-                        <li>{submission.company?.suggestedName1 || '-'}</li>
-                        <li>{submission.company?.suggestedName2 || '-'}</li>
-                        <li>{submission.company?.suggestedName3 || '-'}</li>
-                      </ul>
-                    </div>
-                  )}
                 </div>
               </section>
               <Separator />
@@ -310,16 +306,6 @@ export default function SubmissionDetail() {
                   <div>
                     <p className="text-sm text-muted-foreground">CNAE Principal</p>
                     <p className="font-medium">{submission.activity?.mainCnae || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">CNAEs Secundários</p>
-                    <p>{submission.activity?.secondaryCnaes || '-'}</p>
-                  </div>
-                  <div>
-                    <p className="text-sm text-muted-foreground">Descrição da Atividade</p>
-                    <p className="bg-slate-50 p-3 rounded text-sm mt-1">
-                      {submission.activity?.description || '-'}
-                    </p>
                   </div>
                   <div>
                     <p className="text-sm text-muted-foreground">Endereço do Negócio</p>
@@ -349,21 +335,9 @@ export default function SubmissionDetail() {
                             <div>
                               <span className="text-muted-foreground block">CPF</span> {p.cpf}
                             </div>
-                            <div>
-                              <span className="text-muted-foreground block">RG</span> {p.rg}
-                            </div>
-                            <div className="col-span-1 sm:col-span-2">
-                              <span className="text-muted-foreground block">
-                                Endereço Residencial
-                              </span>{' '}
-                              {p.address}
-                            </div>
                           </div>
                         </div>
                       ))}
-                      {(!submission.partners || submission.partners.length === 0) && (
-                        <p className="text-muted-foreground italic">Nenhum sócio registrado.</p>
-                      )}
                     </div>
                   </section>
                   <Separator />
@@ -374,54 +348,40 @@ export default function SubmissionDetail() {
                 <h3 className="text-lg sm:text-xl font-semibold mb-4 text-primary border-l-4 border-primary pl-3">
                   {submission.company?.type === 'mei' ? '3' : '4'}. Documentos Anexados
                 </h3>
-                <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
-                  {submission.documents?.map((doc) => (
-                    <div
-                      key={doc.id}
-                      className="flex items-center gap-3 p-3 border rounded-md bg-slate-50"
-                    >
-                      {doc.fileName ? (
-                        <CheckCircle2 className="h-5 w-5 text-success shrink-0" />
-                      ) : (
-                        <div className="h-5 w-5 rounded-full border-2 border-dashed border-muted-foreground shrink-0" />
-                      )}
-                      <div>
-                        <p className="font-medium text-sm">{doc.label}</p>
-                        <p className="text-xs text-muted-foreground break-all">
-                          {doc.fileName || 'Pendente'}
-                        </p>
-                      </div>
-                    </div>
-                  ))}
-                  {(!submission.documents || submission.documents.length === 0) && (
-                    <p className="text-muted-foreground italic">Nenhum documento registrado.</p>
-                  )}
-                </div>
-              </section>
-              <Separator />
-
-              <section className="print-break-inside-avoid text-center pt-8 pb-16">
-                <h3 className="text-lg font-medium mb-12">Assinatura Digital</h3>
-                <div className="max-w-md mx-auto">
-                  {submission.signature ? (
-                    <div className="border-b border-black pb-2 mb-2 inline-block px-12">
-                      <SecureSignature src={submission.signature} />
-                    </div>
-                  ) : (
-                    <div className="border-b border-black pb-2 mb-2 w-full max-w-sm mx-auto h-24" />
-                  )}
-                  <p className="font-semibold text-sm">{submission.clientName}</p>
-                  <p className="text-xs text-muted-foreground">Representante Legal / Solicitante</p>
-                  {submission.signature && (
-                    <p className="text-[10px] text-muted-foreground mt-2">
-                      Assinado digitalmente em{' '}
-                      {new Date(submission.updatedAt).toLocaleString('pt-BR')}.
-                    </p>
-                  )}
-                </div>
+                {attachments.length > 0 ? (
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    {attachments.map((att) => (
+                      <AttachmentCard key={att.id} attachment={att} />
+                    ))}
+                  </div>
+                ) : (
+                  <p className="text-muted-foreground italic">Nenhum documento anexado.</p>
+                )}
               </section>
             </>
           )}
+
+          <Separator className="my-8" />
+
+          <section className="print-break-inside-avoid text-center pb-16">
+            <h3 className="text-lg font-medium mb-12">Assinatura Digital</h3>
+            <div className="max-w-md mx-auto">
+              {submission.signature ? (
+                <div className="border-b border-black pb-2 mb-2 inline-block px-12">
+                  <SecureSignature src={submission.signature} />
+                </div>
+              ) : (
+                <div className="border-b border-black pb-2 mb-2 w-full max-w-sm mx-auto h-24" />
+              )}
+              <p className="font-semibold text-sm">{submission.clientName}</p>
+              <p className="text-xs text-muted-foreground">Representante Legal / Solicitante</p>
+              {submission.signature && (
+                <p className="text-[10px] text-muted-foreground mt-2">
+                  Assinado digitalmente em {new Date(submission.updatedAt).toLocaleString('pt-BR')}.
+                </p>
+              )}
+            </div>
+          </section>
         </div>
       )}
     </div>
