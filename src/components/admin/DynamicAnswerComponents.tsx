@@ -1,39 +1,102 @@
-import { Paperclip } from 'lucide-react'
+import { useState } from 'react'
+import { Eye, ExternalLink } from 'lucide-react'
 import { useSignedUrl } from '@/hooks/use-signed-url'
+import { Button } from '@/components/ui/button'
+import { DocumentPreviewDialog } from './DocumentPreviewDialog'
 
 const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i.test(url)
+const isPdfUrl = (url: string) => url.toLowerCase().includes('.pdf')
 
 export const SecureAttachmentLink = ({ value }: { value: string }) => {
   const { url, loading } = useSignedUrl(value)
+  const [previewOpen, setPreviewOpen] = useState(false)
 
   if (loading) {
     return <div className="animate-pulse h-10 w-32 bg-slate-200 rounded mt-2"></div>
   }
 
-  if (isImageUrl(url)) {
+  if (!url) {
+    return <span className="text-sm text-destructive mt-1 block">Anexo indisponível</span>
+  }
+
+  let name = 'Documento Anexo'
+  try {
+    const urlObj = new URL(value)
+    const parts = urlObj.pathname.split('/')
+    name = decodeURIComponent(parts[parts.length - 1])
+  } catch (e) {
+    try {
+      const parts = url.split('?')[0].split('/')
+      name = decodeURIComponent(parts[parts.length - 1])
+    } catch (err) {
+      name = 'Documento Anexo'
+    }
+  }
+
+  if (isImageUrl(value) || isImageUrl(url)) {
     return (
-      <a href={url || undefined} target="_blank" rel="noopener noreferrer" className="block mt-2">
-        {url ? (
-          <img
-            src={url}
-            alt="Anexo"
-            className="max-w-xs max-h-48 rounded border border-border shadow-sm object-cover hover:opacity-90 transition-opacity"
-          />
-        ) : null}
-      </a>
+      <>
+        <button
+          onClick={() => setPreviewOpen(true)}
+          className="block mt-2 text-left cursor-pointer group focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2 rounded"
+          type="button"
+          title="Clique para visualizar em tela cheia"
+        >
+          <div className="relative inline-block">
+            <img
+              src={url}
+              alt="Anexo"
+              className="max-w-xs max-h-48 rounded border border-border shadow-sm object-cover group-hover:opacity-90 transition-opacity"
+            />
+            <div className="absolute inset-0 bg-black/0 group-hover:bg-black/10 transition-colors rounded flex items-center justify-center opacity-0 group-hover:opacity-100">
+              <div className="bg-background/90 text-foreground p-2 rounded-full shadow-sm">
+                <Eye className="w-5 h-5" />
+              </div>
+            </div>
+          </div>
+        </button>
+        <DocumentPreviewDialog
+          url={url}
+          name={name}
+          open={previewOpen}
+          onOpenChange={setPreviewOpen}
+        />
+      </>
     )
   }
 
   return (
-    <a
-      href={url || undefined}
-      target="_blank"
-      rel="noopener noreferrer"
-      className="text-primary hover:underline break-all inline-flex items-center gap-2 mt-1 bg-primary/5 px-3 py-2 rounded-md border border-primary/20 hover:bg-primary/10 transition-colors"
-    >
-      <Paperclip className="w-4 h-4 shrink-0" />
-      <span className="text-sm font-medium">Visualizar Documento</span>
-    </a>
+    <>
+      <div className="flex items-center gap-2 mt-2 flex-wrap">
+        <button
+          onClick={() => setPreviewOpen(true)}
+          type="button"
+          className="text-primary hover:underline break-all inline-flex items-center gap-2 bg-primary/5 px-3 py-2 rounded-md border border-primary/20 hover:bg-primary/10 transition-colors focus:outline-none focus:ring-2 focus:ring-primary focus:ring-offset-2"
+        >
+          <Eye className="w-4 h-4 shrink-0" />
+          <span className="text-sm font-medium">
+            Visualizar {isPdfUrl(value) || isPdfUrl(url) ? 'PDF' : 'Documento'}
+          </span>
+        </button>
+        <Button
+          asChild
+          variant="outline"
+          size="sm"
+          className="h-[38px] text-muted-foreground hover:text-foreground"
+        >
+          <a href={url} target="_blank" rel="noopener noreferrer" title="Abrir em nova aba">
+            <ExternalLink className="w-4 h-4 shrink-0" />
+            <span className="sr-only sm:not-sr-only sm:ml-2">Abrir</span>
+          </a>
+        </Button>
+      </div>
+      <DocumentPreviewDialog
+        url={url}
+        name={name}
+        open={previewOpen}
+        onOpenChange={setPreviewOpen}
+      />
+    </>
   )
 }
 
