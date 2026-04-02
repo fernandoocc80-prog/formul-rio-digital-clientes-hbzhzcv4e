@@ -54,11 +54,13 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
       } else {
         let fullPath = pathOrUrl
         if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
+        try {
+          fullPath = decodeURIComponent(fullPath)
+        } catch (e) {}
         const { data, error } = await supabase.storage.from('documents').download(fullPath)
         if (error) throw error
         if (data) blob = data
       }
-
       if (blob) {
         const objectUrl = URL.createObjectURL(blob)
         const a = document.createElement('a')

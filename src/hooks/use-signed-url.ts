@@ -54,6 +54,11 @@ export const useSignedUrl = (value?: string | null) => {
           return
         } else {
           if (filePath.includes('?')) filePath = filePath.split('?')[0]
+          try {
+            filePath = decodeURIComponent(filePath)
+          } catch (e) {
+            // keep original
+          }
         }
 
         const { data } = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600)

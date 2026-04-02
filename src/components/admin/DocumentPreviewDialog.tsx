@@ -79,6 +79,9 @@ export function DocumentPreviewDialog({
         } else {
           let fullPath = pathOrUrl
           if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
+          try {
+            fullPath = decodeURIComponent(fullPath)
+          } catch (e) {}
           const { data, error: dlError } = await supabase.storage
             .from('documents')
             .download(fullPath)
@@ -122,7 +125,7 @@ export function DocumentPreviewDialog({
     onOpenChange(isOpen)
   }
 
-  const handleDownload = () => {
+  const handleDownload = async () => {
     if (blobUrl) {
       const a = document.createElement('a')
       a.href = blobUrl
@@ -130,14 +133,38 @@ export function DocumentPreviewDialog({
       document.body.appendChild(a)
       a.click()
       document.body.removeChild(a)
-    } else if (pathOrUrl && pathOrUrl.startsWith('http')) {
-      const a = document.createElement('a')
-      a.href = pathOrUrl
-      a.download = name || 'documento'
-      a.target = '_blank'
-      document.body.appendChild(a)
-      a.click()
-      document.body.removeChild(a)
+    } else if (pathOrUrl) {
+      if (pathOrUrl.startsWith('http')) {
+        const a = document.createElement('a')
+        a.href = pathOrUrl
+        a.download = name || 'documento'
+        a.target = '_blank'
+        document.body.appendChild(a)
+        a.click()
+        document.body.removeChild(a)
+      } else {
+        try {
+          let fullPath = pathOrUrl
+          if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
+          try {
+            fullPath = decodeURIComponent(fullPath)
+          } catch (e) {}
+          const { data, error } = await supabase.storage.from('documents').download(fullPath)
+          if (error) throw error
+          if (data) {
+            const url = URL.createObjectURL(data)
+            const a = document.createElement('a')
+            a.href = url
+            a.download = name || 'documento'
+            document.body.appendChild(a)
+            a.click()
+            document.body.removeChild(a)
+            setTimeout(() => URL.revokeObjectURL(url), 1000)
+          }
+        } catch (e) {
+          console.error('Download error:', e)
+        }
+      }
     }
   }
 

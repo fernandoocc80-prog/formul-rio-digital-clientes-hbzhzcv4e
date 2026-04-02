@@ -66,22 +66,32 @@ export default function SubmissionDetail() {
       submission.dynamicAnswers.forEach((ans: any, i: number) => {
         const vals = Array.isArray(ans.value) ? ans.value : [ans.value]
         vals.forEach((val: any) => {
-          if (typeof val === 'string' && (val.startsWith('http') || val.includes('/storage/'))) {
+          if (
+            typeof val === 'string' &&
+            (val.startsWith('http') ||
+              val.includes('/storage/') ||
+              /\.(pdf|jpe?g|png|gif|webp|heic|zip|rar|csv|xlsx?|docx?|txt)$/i.test(val))
+          ) {
             const alreadyAdded = list.some(
               (a) => a.pathOrUrl && (val.includes(a.pathOrUrl) || a.pathOrUrl.includes(val)),
             )
             if (!alreadyAdded) {
               let cleanName = `Anexo_${i + 1}`
-              try {
-                const urlToParse = val.startsWith('http')
-                  ? val
-                  : `http://localhost${val.startsWith('/') ? val : '/' + val}`
-                const parts = new URL(urlToParse).pathname.split('/')
-                let lastPart = parts[parts.length - 1]
-                if (lastPart) cleanName = decodeURIComponent(lastPart)
-              } catch (e) {
-                // ignore
+              if (val.startsWith('http') || val.startsWith('/')) {
+                try {
+                  const urlToParse = val.startsWith('http')
+                    ? val
+                    : `http://localhost${val.startsWith('/') ? val : '/' + val}`
+                  const parts = new URL(urlToParse).pathname.split('/')
+                  let lastPart = parts[parts.length - 1]
+                  if (lastPart) cleanName = decodeURIComponent(lastPart)
+                } catch (e) {
+                  cleanName = val.split('/').pop() || cleanName
+                }
+              } else {
+                cleanName = val.split('/').pop() || val
               }
+
               list.push({
                 id: `json-${i}-${Math.random()}`,
                 name: cleanName,
@@ -96,22 +106,31 @@ export default function SubmissionDetail() {
 
     if (!submission?.dynamicAnswers && list.length === 0) {
       const traverse = (obj: any, pathLabel: string) => {
-        if (typeof obj === 'string' && (obj.startsWith('http') || obj.includes('/storage/'))) {
+        if (
+          typeof obj === 'string' &&
+          (obj.startsWith('http') ||
+            obj.includes('/storage/') ||
+            /\.(pdf|jpe?g|png|gif|webp|heic|zip|rar|csv|xlsx?|docx?|txt)$/i.test(obj))
+        ) {
           if (!obj.toLowerCase().includes('signature')) {
             const alreadyAdded = list.some(
               (a) => a.pathOrUrl && (obj.includes(a.pathOrUrl) || a.pathOrUrl.includes(obj)),
             )
             if (!alreadyAdded) {
               let cleanName = 'Anexo'
-              try {
-                const urlToParse = obj.startsWith('http')
-                  ? obj
-                  : `http://localhost${obj.startsWith('/') ? obj : '/' + obj}`
-                const parts = new URL(urlToParse).pathname.split('/')
-                let lastPart = parts[parts.length - 1]
-                if (lastPart) cleanName = decodeURIComponent(lastPart)
-              } catch (e) {
-                // ignore
+              if (obj.startsWith('http') || obj.startsWith('/')) {
+                try {
+                  const urlToParse = obj.startsWith('http')
+                    ? obj
+                    : `http://localhost${obj.startsWith('/') ? obj : '/' + obj}`
+                  const parts = new URL(urlToParse).pathname.split('/')
+                  let lastPart = parts[parts.length - 1]
+                  if (lastPart) cleanName = decodeURIComponent(lastPart)
+                } catch (e) {
+                  cleanName = obj.split('/').pop() || cleanName
+                }
+              } else {
+                cleanName = obj.split('/').pop() || obj
               }
               list.push({
                 id: `gen-${Math.random()}`,
@@ -134,13 +153,22 @@ export default function SubmissionDetail() {
     if (submission?.documents) {
       submission.documents.forEach((doc: any) => {
         const exists = list.some((a) => a.name === doc.fileName || a.label === doc.label)
+        const path = doc.url || doc.path || doc.file_path || doc.fileUrl || doc.value || null
         if (!exists) {
           list.push({
-            id: doc.id,
-            name: doc.fileName || 'Pendente',
-            label: doc.label,
-            pathOrUrl: null,
+            id: doc.id || `doc-${Math.random()}`,
+            name: doc.fileName || (path ? 'Documento Anexado' : 'Pendente'),
+            label: doc.label || 'Documento',
+            pathOrUrl: path,
           })
+        } else {
+          const existingIdx = list.findIndex(
+            (a) => a.name === doc.fileName || a.label === doc.label,
+          )
+          if (existingIdx >= 0 && !list[existingIdx].pathOrUrl && path) {
+            list[existingIdx].pathOrUrl = path
+            if (doc.fileName) list[existingIdx].name = doc.fileName
+          }
         }
       })
     }
