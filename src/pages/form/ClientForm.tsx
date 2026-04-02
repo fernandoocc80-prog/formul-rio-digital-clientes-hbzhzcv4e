@@ -5,6 +5,7 @@ import { Button } from '@/components/ui/button'
 import { Progress } from '@/components/ui/progress'
 import { useToast } from '@/hooks/use-toast'
 import { useAppStore } from '@/store/AppContext'
+import { supabase } from '@/lib/supabase/client'
 import { CompanyData, Partner, ActivityData, DocumentItem } from '@/types'
 
 import { CompanyStep } from '@/components/form/CompanyStep'
@@ -200,12 +201,37 @@ export default function ClientForm() {
         })
         navigate(`/form/${id}/success`)
       } else {
-        const newId = await addSubmission(data)
+        // Envio direto para o Supabase garantindo centralização na nuvem para que os Admins visualizem o retorno
+        const protocol = `PRT-${Math.floor(Math.random() * 10000000)
+          .toString()
+          .padStart(8, '0')}`
+        const submissionPayload = {
+          ...data,
+          protocol,
+          type: 'company_registration',
+          createdAt: new Date().toISOString(),
+          updatedAt: new Date().toISOString(),
+        }
+
+        const { data: inserted, error } = await supabase
+          .from('form_submissions')
+          .insert({ data: submissionPayload })
+          .select('id')
+          .single()
+
+        if (error) throw error
+
+        try {
+          await addSubmission(submissionPayload)
+        } catch (e) {
+          // Ignora erro local se o envio na nuvem funcionou com sucesso
+        }
+
         toast({
           title: 'Sucesso!',
           description: 'Seu formulário foi enviado com sucesso e recebido pela nossa equipe.',
         })
-        navigate(`/form/${newId}/success`)
+        navigate(`/form/${inserted.id}/success`)
       }
     } catch (err) {
       toast({

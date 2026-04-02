@@ -14,12 +14,18 @@ import { DynamicAnswerValue, SecureSignature } from '@/components/admin/DynamicA
 export default function SubmissionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
-  const { getSubmission, downloadGeneratedPDF } = useAppStore()
+  const { getSubmission, downloadGeneratedPDF, syncSubmissions } = useAppStore()
   const [viewHtml, setViewHtml] = useState(false)
   const [isDownloading, setIsDownloading] = useState(false)
   const [dbFiles, setDbFiles] = useState<{ id: string; file_path: string }[]>([])
 
   const submission = id ? getSubmission(id) : undefined
+
+  useEffect(() => {
+    if (id && !submission) {
+      syncSubmissions({ force: true, skipCache: true }).catch(() => {})
+    }
+  }, [id, submission, syncSubmissions])
 
   useEffect(() => {
     if (submission?.id) {

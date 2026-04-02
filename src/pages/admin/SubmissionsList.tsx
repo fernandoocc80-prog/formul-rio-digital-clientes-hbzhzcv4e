@@ -23,6 +23,7 @@ import {
 import { Popover, PopoverContent, PopoverTrigger } from '@/components/ui/popover'
 import { Calendar } from '@/components/ui/calendar'
 import { useAppStore } from '@/store/AppContext'
+import { supabase } from '@/lib/supabase/client'
 import { ShareFormDialog } from '@/components/share/ShareFormDialog'
 import { EmailSettingsDialog } from '@/components/admin/EmailSettingsDialog'
 import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
@@ -74,6 +75,17 @@ export default function SubmissionsList() {
     syncSubmissions({ force: true, background: false, skipCache: true }).catch(() => {
       /* ignore */
     })
+
+    const channel = supabase
+      .channel('admin_submissions_channel')
+      .on('postgres_changes', { event: '*', schema: 'public', table: 'form_submissions' }, () => {
+        syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {})
+      })
+      .subscribe()
+
+    return () => {
+      supabase.removeChannel(channel)
+    }
   }, [syncSubmissions])
 
   const handleClearFilters = () => {
