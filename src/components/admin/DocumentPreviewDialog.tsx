@@ -81,7 +81,9 @@ export function DocumentPreviewDialog({
           if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
           try {
             fullPath = decodeURIComponent(fullPath)
-          } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
           const { data, error: dlError } = await supabase.storage
             .from('documents')
             .download(fullPath)
@@ -148,7 +150,9 @@ export function DocumentPreviewDialog({
           if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
           try {
             fullPath = decodeURIComponent(fullPath)
-          } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
           const { data, error } = await supabase.storage.from('documents').download(fullPath)
           if (error) throw error
           if (data) {

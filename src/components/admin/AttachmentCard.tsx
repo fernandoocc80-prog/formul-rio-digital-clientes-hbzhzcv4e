@@ -56,7 +56,9 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
         if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
         try {
           fullPath = decodeURIComponent(fullPath)
-        } catch (e) {}
+        } catch (e) {
+          // ignore
+        }
         const { data, error } = await supabase.storage.from('documents').download(fullPath)
         if (error) throw error
         if (data) blob = data
