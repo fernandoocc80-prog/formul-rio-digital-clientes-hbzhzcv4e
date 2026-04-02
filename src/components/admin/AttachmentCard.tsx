@@ -31,35 +31,30 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
       let blob: Blob | null = null
       const pathOrUrl = attachment.pathOrUrl
 
-      if (pathOrUrl.startsWith('http')) {
-        if (pathOrUrl.includes('/storage/v1/object/')) {
-          let bucket = 'documents'
-          let filePath = pathOrUrl
-          if (pathOrUrl.includes('/storage/v1/object/public/')) {
-            const urlObj = new URL(pathOrUrl)
-            const pathParts = urlObj.pathname.split('/storage/v1/object/public/')[1]
-            if (pathParts) {
-              bucket = pathParts.split('/')[0]
-              filePath = decodeURIComponent(pathParts.substring(bucket.length + 1))
-            }
-          } else if (pathOrUrl.includes('/storage/v1/object/authenticated/')) {
-            const urlObj = new URL(pathOrUrl)
-            const pathParts = urlObj.pathname.split('/storage/v1/object/authenticated/')[1]
-            if (pathParts) {
-              bucket = pathParts.split('/')[0]
-              filePath = decodeURIComponent(pathParts.substring(bucket.length + 1))
-            }
-          }
+      const publicMarker = '/storage/v1/object/public/'
+      const authMarker = '/storage/v1/object/authenticated/'
+
+      if (pathOrUrl.includes(publicMarker) || pathOrUrl.includes(authMarker)) {
+        const marker = pathOrUrl.includes(publicMarker) ? publicMarker : authMarker
+        const parts = pathOrUrl.split(marker)[1]
+        if (parts) {
+          const bucket = parts.split('/')[0]
+          let fullPath = parts.substring(bucket.length + 1)
+          if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
+          const filePath = decodeURIComponent(fullPath)
+
           const { data, error } = await supabase.storage.from(bucket).download(filePath)
           if (error) throw error
           if (data) blob = data
-        } else {
-          const res = await fetch(pathOrUrl)
-          if (!res.ok) throw new Error('Download failed')
-          blob = await res.blob()
         }
+      } else if (pathOrUrl.startsWith('http')) {
+        const res = await fetch(pathOrUrl)
+        if (!res.ok) throw new Error('Download failed')
+        blob = await res.blob()
       } else {
-        const { data, error } = await supabase.storage.from('documents').download(pathOrUrl)
+        let fullPath = pathOrUrl
+        if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
+        const { data, error } = await supabase.storage.from('documents').download(fullPath)
         if (error) throw error
         if (data) blob = data
       }

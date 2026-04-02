@@ -34,23 +34,26 @@ export const useSignedUrl = (value?: string | null) => {
         let bucket = 'documents'
         let filePath = value
 
-        if (value.includes('/storage/v1/object/public/')) {
-          const urlObj = new URL(value)
-          const pathParts = urlObj.pathname.split('/storage/v1/object/public/')[1]
-          if (pathParts) {
-            bucket = pathParts.split('/')[0]
-            filePath = decodeURIComponent(pathParts.substring(bucket.length + 1))
-          }
-        } else if (value.includes('/storage/v1/object/authenticated/')) {
-          const urlObj = new URL(value)
-          const pathParts = urlObj.pathname.split('/storage/v1/object/authenticated/')[1]
-          if (pathParts) {
-            bucket = pathParts.split('/')[0]
-            filePath = decodeURIComponent(pathParts.substring(bucket.length + 1))
+        const publicMarker = '/storage/v1/object/public/'
+        const authMarker = '/storage/v1/object/authenticated/'
+
+        if (value.includes(publicMarker) || value.includes(authMarker)) {
+          const marker = value.includes(publicMarker) ? publicMarker : authMarker
+          const parts = value.split(marker)[1]
+          if (parts) {
+            bucket = parts.split('/')[0]
+            let fullPath = parts.substring(bucket.length + 1)
+            if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
+            filePath = decodeURIComponent(fullPath)
           }
         } else if (value.startsWith('http')) {
-          if (isMounted) setUrl(value)
+          if (isMounted) {
+            setUrl(value)
+            setLoading(false)
+          }
           return
+        } else {
+          if (filePath.includes('?')) filePath = filePath.split('?')[0]
         }
 
         const { data } = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600)

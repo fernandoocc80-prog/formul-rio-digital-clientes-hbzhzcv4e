@@ -73,8 +73,12 @@ export default function SubmissionDetail() {
             if (!alreadyAdded) {
               let cleanName = `Anexo_${i + 1}`
               try {
-                const parts = new URL(val).pathname.split('/')
-                cleanName = decodeURIComponent(parts[parts.length - 1])
+                const urlToParse = val.startsWith('http')
+                  ? val
+                  : `http://localhost${val.startsWith('/') ? val : '/' + val}`
+                const parts = new URL(urlToParse).pathname.split('/')
+                let lastPart = parts[parts.length - 1]
+                if (lastPart) cleanName = decodeURIComponent(lastPart)
               } catch (e) {
                 // ignore
               }
@@ -100,8 +104,12 @@ export default function SubmissionDetail() {
             if (!alreadyAdded) {
               let cleanName = 'Anexo'
               try {
-                const parts = new URL(obj).pathname.split('/')
-                cleanName = decodeURIComponent(parts[parts.length - 1])
+                const urlToParse = obj.startsWith('http')
+                  ? obj
+                  : `http://localhost${obj.startsWith('/') ? obj : '/' + obj}`
+                const parts = new URL(urlToParse).pathname.split('/')
+                let lastPart = parts[parts.length - 1]
+                if (lastPart) cleanName = decodeURIComponent(lastPart)
               } catch (e) {
                 // ignore
               }
