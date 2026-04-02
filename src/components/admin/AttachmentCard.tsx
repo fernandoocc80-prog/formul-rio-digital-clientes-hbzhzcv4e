@@ -82,7 +82,9 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
           let decodedPath = filePath
           try {
             decodedPath = decodeURIComponent(filePath)
-          } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
 
           let { data, error } = await supabase.storage.from(bucket).download(decodedPath)
 

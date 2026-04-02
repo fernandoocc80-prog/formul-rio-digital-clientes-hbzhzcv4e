@@ -56,9 +56,6 @@ export function DocumentPreviewDialog({
       try {
         let blob: Blob | null = null
 
-        const publicMarker = '/storage/v1/object/public/'
-        const authMarker = '/storage/v1/object/authenticated/'
-
         let bucket = 'documents'
         let filePath = pathOrUrl
 
@@ -97,7 +94,9 @@ export function DocumentPreviewDialog({
           let decodedPath = filePath
           try {
             decodedPath = decodeURIComponent(filePath)
-          } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
 
           let { data, error: dlError } = await supabase.storage.from(bucket).download(decodedPath)
 
@@ -195,7 +194,9 @@ export function DocumentPreviewDialog({
           let decodedPath = filePath
           try {
             decodedPath = decodeURIComponent(filePath)
-          } catch (e) {}
+          } catch (e) {
+            // ignore
+          }
 
           let { data, error } = await supabase.storage.from(bucket).download(decodedPath)
 

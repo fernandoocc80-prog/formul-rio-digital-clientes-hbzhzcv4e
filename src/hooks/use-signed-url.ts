@@ -69,7 +69,9 @@ export const useSignedUrl = (value?: string | null) => {
         let decodedPath = filePath
         try {
           decodedPath = decodeURIComponent(filePath)
-        } catch (e) {}
+        } catch (e) {
+          // ignore
+        }
 
         let { data, error } = await supabase.storage.from(bucket).createSignedUrl(decodedPath, 3600)
 
