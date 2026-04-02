@@ -31,37 +31,70 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
       let blob: Blob | null = null
       const pathOrUrl = attachment.pathOrUrl
 
-      const publicMarker = '/storage/v1/object/public/'
-      const authMarker = '/storage/v1/object/authenticated/'
+      // 1. If we have a signed URL, try fetching it directly
+      if (url && url.startsWith('http')) {
+        try {
+          const res = await fetch(url)
+          if (res.ok) {
+            blob = await res.blob()
+          }
+        } catch (e) {
+          console.error('Failed to fetch signed url, falling back to storage download', e)
+        }
+      }
 
-      if (pathOrUrl.includes(publicMarker) || pathOrUrl.includes(authMarker)) {
-        const marker = pathOrUrl.includes(publicMarker) ? publicMarker : authMarker
-        const parts = pathOrUrl.split(marker)[1]
-        if (parts) {
-          const bucket = parts.split('/')[0]
-          let fullPath = parts.substring(bucket.length + 1)
-          if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
-          const filePath = decodeURIComponent(fullPath)
+      // 2. If still no blob, try parsing path and using Supabase SDK
+      if (!blob) {
+        let bucket = 'documents'
+        let filePath = pathOrUrl
 
-          const { data, error } = await supabase.storage.from(bucket).download(filePath)
+        const publicMarker = '/storage/v1/object/public/'
+        const authMarker = '/storage/v1/object/authenticated/'
+        const signMarker = '/storage/v1/object/sign/'
+
+        if (
+          pathOrUrl.includes(publicMarker) ||
+          pathOrUrl.includes(authMarker) ||
+          pathOrUrl.includes(signMarker)
+        ) {
+          const marker = pathOrUrl.includes(publicMarker)
+            ? publicMarker
+            : pathOrUrl.includes(authMarker)
+              ? authMarker
+              : signMarker
+
+          const parts = pathOrUrl.split(marker)[1]
+          if (parts) {
+            bucket = parts.split('/')[0]
+            let fullPath = parts.substring(bucket.length + 1)
+            if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
+            filePath = fullPath
+          }
+        } else if (pathOrUrl.startsWith('http')) {
+          const res = await fetch(pathOrUrl)
+          if (!res.ok) throw new Error('Download failed')
+          blob = await res.blob()
+        } else {
+          if (filePath.includes('?')) filePath = filePath.split('?')[0]
+        }
+
+        if (!blob) {
+          let decodedPath = filePath
+          try {
+            decodedPath = decodeURIComponent(filePath)
+          } catch (e) {}
+
+          let { data, error } = await supabase.storage.from(bucket).download(decodedPath)
+
+          if (error && decodedPath !== filePath) {
+            const fallback = await supabase.storage.from(bucket).download(filePath)
+            data = fallback.data
+            error = fallback.error
+          }
+
           if (error) throw error
           if (data) blob = data
         }
-      } else if (pathOrUrl.startsWith('http')) {
-        const res = await fetch(pathOrUrl)
-        if (!res.ok) throw new Error('Download failed')
-        blob = await res.blob()
-      } else {
-        let fullPath = pathOrUrl
-        if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
-        try {
-          fullPath = decodeURIComponent(fullPath)
-        } catch (e) {
-          // ignore
-        }
-        const { data, error } = await supabase.storage.from('documents').download(fullPath)
-        if (error) throw error
-        if (data) blob = data
       }
       if (blob) {
         const objectUrl = URL.createObjectURL(blob)

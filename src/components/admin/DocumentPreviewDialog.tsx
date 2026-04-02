@@ -59,34 +59,54 @@ export function DocumentPreviewDialog({
         const publicMarker = '/storage/v1/object/public/'
         const authMarker = '/storage/v1/object/authenticated/'
 
-        if (pathOrUrl.includes(publicMarker) || pathOrUrl.includes(authMarker)) {
-          const marker = pathOrUrl.includes(publicMarker) ? publicMarker : authMarker
+        let bucket = 'documents'
+        let filePath = pathOrUrl
+
+        const publicMarker = '/storage/v1/object/public/'
+        const authMarker = '/storage/v1/object/authenticated/'
+        const signMarker = '/storage/v1/object/sign/'
+
+        if (
+          pathOrUrl.includes(publicMarker) ||
+          pathOrUrl.includes(authMarker) ||
+          pathOrUrl.includes(signMarker)
+        ) {
+          const marker = pathOrUrl.includes(publicMarker)
+            ? publicMarker
+            : pathOrUrl.includes(authMarker)
+              ? authMarker
+              : signMarker
+
           const parts = pathOrUrl.split(marker)[1]
           if (parts) {
-            const bucket = parts.split('/')[0]
+            bucket = parts.split('/')[0]
             let fullPath = parts.substring(bucket.length + 1)
             if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
-            const filePath = decodeURIComponent(fullPath)
-
-            const { data, error: dlError } = await supabase.storage.from(bucket).download(filePath)
-            if (dlError) throw dlError
-            if (data) blob = data
+            filePath = fullPath
           }
         } else if (pathOrUrl.startsWith('http')) {
+          // Attempt direct fetch for external URLs
           const res = await fetch(pathOrUrl)
           if (!res.ok) throw new Error('Falha ao baixar o arquivo externo.')
           blob = await res.blob()
         } else {
-          let fullPath = pathOrUrl
-          if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
+          if (filePath.includes('?')) filePath = filePath.split('?')[0]
+        }
+
+        if (!blob) {
+          let decodedPath = filePath
           try {
-            fullPath = decodeURIComponent(fullPath)
-          } catch (e) {
-            // ignore
+            decodedPath = decodeURIComponent(filePath)
+          } catch (e) {}
+
+          let { data, error: dlError } = await supabase.storage.from(bucket).download(decodedPath)
+
+          if (dlError && decodedPath !== filePath) {
+            const fallback = await supabase.storage.from(bucket).download(filePath)
+            data = fallback.data
+            dlError = fallback.error
           }
-          const { data, error: dlError } = await supabase.storage
-            .from('documents')
-            .download(fullPath)
+
           if (dlError) throw dlError
           if (data) blob = data
         }
@@ -136,37 +156,79 @@ export function DocumentPreviewDialog({
       a.click()
       document.body.removeChild(a)
     } else if (pathOrUrl) {
-      if (pathOrUrl.startsWith('http')) {
-        const a = document.createElement('a')
-        a.href = pathOrUrl
-        a.download = name || 'documento'
-        a.target = '_blank'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-      } else {
-        try {
-          let fullPath = pathOrUrl
-          if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
+      try {
+        let blob: Blob | null = null
+        let bucket = 'documents'
+        let filePath = pathOrUrl
+
+        const publicMarker = '/storage/v1/object/public/'
+        const authMarker = '/storage/v1/object/authenticated/'
+        const signMarker = '/storage/v1/object/sign/'
+
+        if (
+          pathOrUrl.includes(publicMarker) ||
+          pathOrUrl.includes(authMarker) ||
+          pathOrUrl.includes(signMarker)
+        ) {
+          const marker = pathOrUrl.includes(publicMarker)
+            ? publicMarker
+            : pathOrUrl.includes(authMarker)
+              ? authMarker
+              : signMarker
+
+          const parts = pathOrUrl.split(marker)[1]
+          if (parts) {
+            bucket = parts.split('/')[0]
+            let fullPath = parts.substring(bucket.length + 1)
+            if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
+            filePath = fullPath
+          }
+        } else if (pathOrUrl.startsWith('http')) {
+          const res = await fetch(pathOrUrl)
+          if (!res.ok) throw new Error('Download failed')
+          blob = await res.blob()
+        } else {
+          if (filePath.includes('?')) filePath = filePath.split('?')[0]
+        }
+
+        if (!blob) {
+          let decodedPath = filePath
           try {
-            fullPath = decodeURIComponent(fullPath)
-          } catch (e) {
-            // ignore
+            decodedPath = decodeURIComponent(filePath)
+          } catch (e) {}
+
+          let { data, error } = await supabase.storage.from(bucket).download(decodedPath)
+
+          if (error && decodedPath !== filePath) {
+            const fallback = await supabase.storage.from(bucket).download(filePath)
+            data = fallback.data
+            error = fallback.error
           }
-          const { data, error } = await supabase.storage.from('documents').download(fullPath)
+
           if (error) throw error
-          if (data) {
-            const url = URL.createObjectURL(data)
-            const a = document.createElement('a')
-            a.href = url
-            a.download = name || 'documento'
-            document.body.appendChild(a)
-            a.click()
-            document.body.removeChild(a)
-            setTimeout(() => URL.revokeObjectURL(url), 1000)
-          }
-        } catch (e) {
-          console.error('Download error:', e)
+          if (data) blob = data
+        }
+
+        if (blob) {
+          const url = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = url
+          a.download = name || 'documento'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          setTimeout(() => URL.revokeObjectURL(url), 1000)
+        }
+      } catch (e) {
+        console.error('Download error:', e)
+        if (pathOrUrl.startsWith('http')) {
+          const a = document.createElement('a')
+          a.href = pathOrUrl
+          a.download = name || 'documento'
+          a.target = '_blank'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
         }
       }
     }

@@ -36,15 +36,25 @@ export const useSignedUrl = (value?: string | null) => {
 
         const publicMarker = '/storage/v1/object/public/'
         const authMarker = '/storage/v1/object/authenticated/'
+        const signMarker = '/storage/v1/object/sign/'
 
-        if (value.includes(publicMarker) || value.includes(authMarker)) {
-          const marker = value.includes(publicMarker) ? publicMarker : authMarker
+        if (
+          value.includes(publicMarker) ||
+          value.includes(authMarker) ||
+          value.includes(signMarker)
+        ) {
+          const marker = value.includes(publicMarker)
+            ? publicMarker
+            : value.includes(authMarker)
+              ? authMarker
+              : signMarker
+
           const parts = value.split(marker)[1]
           if (parts) {
             bucket = parts.split('/')[0]
             let fullPath = parts.substring(bucket.length + 1)
             if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
-            filePath = decodeURIComponent(fullPath)
+            filePath = fullPath
           }
         } else if (value.startsWith('http')) {
           if (isMounted) {
@@ -54,14 +64,19 @@ export const useSignedUrl = (value?: string | null) => {
           return
         } else {
           if (filePath.includes('?')) filePath = filePath.split('?')[0]
-          try {
-            filePath = decodeURIComponent(filePath)
-          } catch (e) {
-            // keep original
-          }
         }
 
-        const { data } = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600)
+        let decodedPath = filePath
+        try {
+          decodedPath = decodeURIComponent(filePath)
+        } catch (e) {}
+
+        let { data, error } = await supabase.storage.from(bucket).createSignedUrl(decodedPath, 3600)
+
+        if (error && decodedPath !== filePath) {
+          const fallback = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600)
+          data = fallback.data
+        }
 
         if (data?.signedUrl && isMounted) {
           setUrl(data.signedUrl)
