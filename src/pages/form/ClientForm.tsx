@@ -66,22 +66,8 @@ export default function ClientForm() {
   }, [isDark])
 
   useEffect(() => {
-    if (id && id !== 'new') {
-      const existing = getSubmission(id)
-      if (existing) {
-        setClientName(existing.clientName)
-        setCompany(existing.company || company)
-        setPartners(existing.partners || [])
-        setActivity(existing.activity || activity)
-
-        const mergedDocs = [...(existing.documents || [])]
-        DEFAULT_DOCS.forEach((d) => !mergedDocs.some((x) => x.id === d.id) && mergedDocs.push(d))
-        setDocuments(mergedDocs.length ? mergedDocs : DEFAULT_DOCS)
-
-        setSignature(existing.signature || '')
-      }
-    }
-  }, [id, getSubmission])
+    // Formulário público não deve buscar rascunhos locais via ID para evitar conflitos de sessão
+  }, [id])
 
   const visibleSteps = useMemo(() => {
     return [
@@ -193,50 +179,50 @@ export default function ClientForm() {
         signature,
       }
 
-      if (id && id !== 'new') {
-        await updateSubmission(id, data)
-        toast({
-          title: 'Sucesso!',
-          description: 'Seus dados foram atualizados e enviados com sucesso.',
-        })
-        navigate(`/form/${id}/success`)
-      } else {
-        // Envio direto para o Supabase garantindo centralização na nuvem para que os Admins visualizem o retorno
-        const protocol = `PRT-${Math.floor(Math.random() * 10000000)
-          .toString()
-          .padStart(8, '0')}`
-        const submissionPayload = {
-          ...data,
-          protocol,
-          type: 'company_registration',
-          createdAt: new Date().toISOString(),
-          updatedAt: new Date().toISOString(),
-        }
+      // Envio direto para o Supabase garantindo centralização na nuvem
+      const protocol = `PRT-${Math.floor(Math.random() * 10000000)
+        .toString()
+        .padStart(8, '0')}`
 
-        const { data: inserted, error } = await supabase
-          .from('form_submissions')
-          .insert({ data: submissionPayload })
-          .select('id')
-          .single()
-
-        if (error) throw error
-
-        try {
-          await addSubmission(submissionPayload)
-        } catch (e) {
-          // Ignora erro local se o envio na nuvem funcionou com sucesso
-        }
-
-        toast({
-          title: 'Sucesso!',
-          description: 'Seu formulário foi enviado com sucesso e recebido pela nossa equipe.',
-        })
-        navigate(`/form/${inserted.id}/success`)
+      const submissionPayload = {
+        ...data,
+        protocol,
+        type: 'company_registration',
+        createdAt: new Date().toISOString(),
+        updatedAt: new Date().toISOString(),
       }
-    } catch (err) {
+
+      const formId = id && id !== 'new' ? id : null
+
+      const { data: inserted, error } = await supabase
+        .from('form_submissions')
+        .insert({
+          form_id: formId,
+          data: submissionPayload,
+        })
+        .select('id')
+        .single()
+
+      if (error) throw error
+
+      try {
+        await addSubmission(submissionPayload)
+      } catch (e) {
+        // Ignora erro local se o envio na nuvem funcionou com sucesso
+      }
+
+      toast({
+        title: 'Sucesso!',
+        description: 'Seu formulário foi enviado com sucesso e recebido pela nossa equipe.',
+      })
+      navigate(`/form/${inserted.id}/success`)
+    } catch (err: any) {
+      console.error('Submission error:', err)
       toast({
         title: 'Erro ao processar',
-        description: 'Houve um problema ao enviar o formulário.',
+        description:
+          err?.message ||
+          'Houve um problema de rede ou permissão ao enviar o formulário. Por favor, tente novamente.',
         variant: 'destructive',
       })
     } finally {
