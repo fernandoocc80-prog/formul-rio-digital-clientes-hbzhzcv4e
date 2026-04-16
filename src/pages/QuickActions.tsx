@@ -27,6 +27,7 @@ import { Input } from '@/components/ui/input'
 import { useAppStore } from '@/store/AppContext'
 import { useToast } from '@/hooks/use-toast'
 import { SyncIndicator } from '@/components/dashboard/SyncIndicator'
+import { SecureSignature } from '@/components/admin/DynamicAnswerComponents'
 import { cn } from '@/lib/utils'
 import { Submission } from '@/types'
 
@@ -210,13 +211,14 @@ export default function QuickActions() {
                     <TableHead className="min-w-[150px]">Cliente</TableHead>
                     <TableHead className="whitespace-nowrap">Tipo de Empresa</TableHead>
                     <TableHead className="whitespace-nowrap">Data de Envio</TableHead>
+                    <TableHead className="text-center whitespace-nowrap">Assinatura</TableHead>
                     <TableHead className="text-right whitespace-nowrap">Ações</TableHead>
                   </TableRow>
                 </TableHeader>
                 <TableBody>
                   {filteredSubmissions.length === 0 ? (
                     <TableRow>
-                      <TableCell colSpan={4} className="text-center py-8 text-muted-foreground">
+                      <TableCell colSpan={5} className="text-center py-8 text-muted-foreground">
                         {searchQuery
                           ? 'Nenhum resultado encontrado para sua busca.'
                           : 'Nenhum retorno de formulário encontrado.'}
@@ -239,6 +241,25 @@ export default function QuickActions() {
                         </TableCell>
                         <TableCell className="whitespace-nowrap">
                           {new Date(sub.createdAt).toLocaleDateString('pt-BR')}
+                        </TableCell>
+                        <TableCell className="text-center align-middle">
+                          {(sub as any).signature ||
+                          (sub as any).data?.signature ||
+                          (sub as any).data?.clientSignature ? (
+                            <SecureSignature
+                              src={
+                                (sub as any).signature ||
+                                (sub as any).data?.signature ||
+                                (sub as any).data?.clientSignature
+                              }
+                              className="h-10 w-auto"
+                              containerClassName="h-10 w-24 mx-auto"
+                            />
+                          ) : (
+                            <span className="text-xs text-muted-foreground italic">
+                              Sem assinatura
+                            </span>
+                          )}
                         </TableCell>
                         <TableCell className="text-right">
                           <div className="flex justify-end items-center gap-1 sm:gap-2">

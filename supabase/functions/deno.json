@@ -1,6 +1,6 @@
 {
   "_versions": {
-    "generate-pdf": 1,
+    "generate-pdf": 2,
     "send-confirmation-email": 1
   }
 }

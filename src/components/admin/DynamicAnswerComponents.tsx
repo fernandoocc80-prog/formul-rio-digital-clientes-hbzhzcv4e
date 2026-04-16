@@ -3,6 +3,7 @@ import { Eye, ExternalLink } from 'lucide-react'
 import { useSignedUrl } from '@/hooks/use-signed-url'
 import { Button } from '@/components/ui/button'
 import { DocumentPreviewDialog } from './DocumentPreviewDialog'
+import { cn } from '@/lib/utils'
 
 const isImageUrl = (url: string) => /\.(jpeg|jpg|gif|png|webp)(\?.*)?$/i.test(url)
 const isPdfUrl = (url: string) => url.toLowerCase().includes('.pdf')
@@ -132,22 +133,46 @@ export const DynamicAnswerValue = ({ value }: { value: any }) => {
   return <p className="bg-slate-50 p-3 rounded text-sm mt-1">{String(value)}</p>
 }
 
-export const SecureSignature = ({ src }: { src: string }) => {
+export const SecureSignature = ({
+  src,
+  className,
+  containerClassName,
+}: {
+  src: string
+  className?: string
+  containerClassName?: string
+}) => {
   const { url, loading } = useSignedUrl(src)
 
   if (loading) {
-    return <div className="animate-pulse h-24 w-64 bg-slate-200 mx-auto rounded"></div>
+    return (
+      <div
+        className={cn(
+          'animate-pulse bg-slate-200 mx-auto rounded',
+          containerClassName || 'h-24 w-64',
+        )}
+      ></div>
+    )
   }
 
   if (!url) {
     return (
-      <div className="h-24 w-full max-w-sm mx-auto flex items-center justify-center text-xs text-muted-foreground bg-slate-50 rounded border border-dashed">
-        Assinatura não disponível
+      <div
+        className={cn(
+          'mx-auto flex items-center justify-center text-xs text-muted-foreground bg-slate-50 rounded border border-dashed text-center p-2',
+          containerClassName || 'h-24 w-full max-w-sm',
+        )}
+      >
+        Indisponível
       </div>
     )
   }
 
   return (
-    <img src={url} alt="Assinatura" className="h-24 object-contain mx-auto mix-blend-multiply" />
+    <img
+      src={url}
+      alt="Assinatura"
+      className={cn('object-contain mx-auto mix-blend-multiply', className || 'h-24')}
+    />
   )
 }
