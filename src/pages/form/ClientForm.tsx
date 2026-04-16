@@ -193,15 +193,13 @@ export default function ClientForm() {
       }
 
       const formId = id && id !== 'new' ? id : null
+      const submissionId = crypto.randomUUID()
 
-      const { data: inserted, error } = await supabase
-        .from('form_submissions')
-        .insert({
-          form_id: formId,
-          data: submissionPayload,
-        })
-        .select('id')
-        .single()
+      const { error } = await supabase.from('form_submissions').insert({
+        id: submissionId,
+        form_id: formId,
+        data: submissionPayload,
+      })
 
       if (error) throw error
 
@@ -210,7 +208,7 @@ export default function ClientForm() {
         supabase.functions
           .invoke('send-confirmation-email', {
             body: {
-              submissionId: inserted.id,
+              submissionId,
               clientName: data.clientName,
               email: company.email,
               protocol,
@@ -230,7 +228,7 @@ export default function ClientForm() {
         description:
           'Seu formulário foi enviado com sucesso e recebido pela nossa equipe. Um e-mail de confirmação foi enviado.',
       })
-      navigate(`/form/${inserted.id}/success`)
+      navigate(`/form/${submissionId}/success`)
     } catch (err: any) {
       console.error('Submission error:', err)
       toast({
