@@ -193,22 +193,26 @@ export default function ClientForm() {
       }
 
       const formId = id && id !== 'new' ? id : null
-      const submissionId = crypto.randomUUID()
 
-      const { error } = await supabase.from('form_submissions').insert({
-        id: submissionId,
-        form_id: formId,
-        data: submissionPayload,
-      })
+      const { data: insertedRecord, error } = await supabase
+        .from('form_submissions')
+        .insert({
+          form_id: formId,
+          data: submissionPayload,
+        })
+        .select('id')
+        .single()
 
       if (error) throw error
+
+      const finalSubmissionId = insertedRecord.id
 
       // Dispara envio de email automático via Edge Function
       if (company.email) {
         supabase.functions
           .invoke('send-confirmation-email', {
             body: {
-              submissionId,
+              submissionId: finalSubmissionId,
               clientName: data.clientName,
               email: company.email,
               protocol,
@@ -218,7 +222,7 @@ export default function ClientForm() {
       }
 
       try {
-        await addSubmission(submissionPayload)
+        await addSubmission({ ...submissionPayload, id: finalSubmissionId })
       } catch (e) {
         // Ignora erro local se o envio na nuvem funcionou com sucesso
       }
@@ -228,7 +232,7 @@ export default function ClientForm() {
         description:
           'Seu formulário foi enviado com sucesso e recebido pela nossa equipe. Um e-mail de confirmação foi enviado.',
       })
-      navigate(`/form/${submissionId}/success`)
+      navigate(`/form/${finalSubmissionId}/success`)
     } catch (err: any) {
       console.error('Submission error:', err)
       toast({

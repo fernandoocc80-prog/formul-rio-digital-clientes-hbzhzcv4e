@@ -103,7 +103,8 @@ export default function SubmissionsList() {
   }
 
   const filtered = submissions.filter((s) => {
-    if (statusFilter !== 'all' && s.status !== statusFilter) return false
+    const currentStatus = s.status || 'pending'
+    if (statusFilter !== 'all' && currentStatus !== statusFilter) return false
     if (typeFilter !== 'all' && s.company?.type !== typeFilter) return false
 
     if (startDate || endDate) {
@@ -159,7 +160,7 @@ export default function SubmissionsList() {
       return [
         s.protocol,
         s.clientName,
-        getStatusLabel(s.status),
+        getStatusLabel(s.status || 'pending'),
         new Date(s.createdAt).toLocaleDateString('pt-BR'),
         s.company?.type?.toUpperCase() || '-',
         companyName,
@@ -375,13 +376,13 @@ export default function SubmissionsList() {
                     </TableCell>
                     <TableCell>
                       <Select
-                        value={sub.status}
+                        value={sub.status || 'pending'}
                         onValueChange={(val) =>
                           updateSubmission(sub.id, { status: val as SubmissionStatus })
                         }
                       >
                         <SelectTrigger className="w-[140px] h-9 border-none bg-transparent shadow-none p-0 focus:ring-0">
-                          {getStatusBadge(sub.status)}
+                          {getStatusBadge(sub.status || 'pending')}
                         </SelectTrigger>
                         <SelectContent>
                           <SelectItem value="draft">Rascunho</SelectItem>
