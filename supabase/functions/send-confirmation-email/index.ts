@@ -1,11 +1,10 @@
-import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
-import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import "jsr:@supabase/functions-js/edge-runtime.d.ts"
+import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'POST, OPTIONS',
-  'Access-Control-Allow-Headers':
-    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+  'Access-Control-Allow-Headers': 'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
 serve(async (req: Request) => {
@@ -15,7 +14,7 @@ serve(async (req: Request) => {
 
   try {
     const { submissionId, clientName, email, protocol } = await req.json()
-
+    
     if (!email) {
       throw new Error('Email is required')
     }
@@ -29,7 +28,7 @@ serve(async (req: Request) => {
         method: 'POST',
         headers: {
           'Content-Type': 'application/json',
-          Authorization: `Bearer ${RESEND_API_KEY}`,
+          'Authorization': `Bearer ${RESEND_API_KEY}`
         },
         body: JSON.stringify({
           from: 'Acme <onboarding@resend.dev>',
@@ -46,8 +45,8 @@ serve(async (req: Request) => {
               <br/>
               <p style="color: #6b7280; font-size: 0.875rem;">Atenciosamente,<br/>Equipe de Relacionamento</p>
             </div>
-          `,
-        }),
+          `
+        })
       })
 
       if (!res.ok) {
@@ -63,6 +62,7 @@ serve(async (req: Request) => {
     return new Response(JSON.stringify({ success: true, message: 'Email process completed' }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
+
   } catch (error: any) {
     console.error('Error processing auto-responder:', error)
     return new Response(JSON.stringify({ error: error.message }), {
