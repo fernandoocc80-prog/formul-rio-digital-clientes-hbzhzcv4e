@@ -57,7 +57,7 @@ export function DocumentPreviewDialog({
         let blob: Blob | null = null
 
         let bucket = 'documents'
-        let filePath = pathOrUrl
+        let filePath = pathOrUrl.trim()
 
         const publicMarker = '/storage/v1/object/public/'
         const authMarker = '/storage/v1/object/authenticated/'
@@ -65,26 +65,26 @@ export function DocumentPreviewDialog({
         const baseMarker = '/storage/v1/object/'
 
         if (
-          pathOrUrl.includes(publicMarker) ||
-          pathOrUrl.includes(authMarker) ||
-          pathOrUrl.includes(signMarker) ||
-          pathOrUrl.includes(baseMarker)
+          filePath.includes(publicMarker) ||
+          filePath.includes(authMarker) ||
+          filePath.includes(signMarker) ||
+          filePath.includes(baseMarker)
         ) {
           let marker = baseMarker
-          if (pathOrUrl.includes(publicMarker)) marker = publicMarker
-          else if (pathOrUrl.includes(authMarker)) marker = authMarker
-          else if (pathOrUrl.includes(signMarker)) marker = signMarker
+          if (filePath.includes(publicMarker)) marker = publicMarker
+          else if (filePath.includes(authMarker)) marker = authMarker
+          else if (filePath.includes(signMarker)) marker = signMarker
 
-          const parts = pathOrUrl.split(marker)[1]
+          const parts = filePath.split(marker)[1]
           if (parts) {
             bucket = parts.split('/')[0]
             let fullPath = parts.substring(bucket.length + 1)
             if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
             filePath = fullPath
           }
-        } else if (pathOrUrl.startsWith('http')) {
+        } else if (filePath.startsWith('http')) {
           // Attempt direct fetch for external URLs
-          const res = await fetch(pathOrUrl)
+          const res = await fetch(filePath)
           if (!res.ok) throw new Error('Falha ao baixar o arquivo externo.')
           blob = await res.blob()
         } else {
@@ -92,6 +92,11 @@ export function DocumentPreviewDialog({
         }
 
         if (!blob) {
+          // Remove leading slashes which cause InvalidKey error in Supabase Storage
+          while (filePath.startsWith('/')) {
+            filePath = filePath.substring(1)
+          }
+
           let decodedPath = filePath
           try {
             decodedPath = decodeURIComponent(filePath)
@@ -159,7 +164,7 @@ export function DocumentPreviewDialog({
       try {
         let blob: Blob | null = null
         let bucket = 'documents'
-        let filePath = pathOrUrl
+        let filePath = pathOrUrl.trim()
 
         const publicMarker = '/storage/v1/object/public/'
         const authMarker = '/storage/v1/object/authenticated/'
@@ -167,25 +172,25 @@ export function DocumentPreviewDialog({
         const baseMarker = '/storage/v1/object/'
 
         if (
-          pathOrUrl.includes(publicMarker) ||
-          pathOrUrl.includes(authMarker) ||
-          pathOrUrl.includes(signMarker) ||
-          pathOrUrl.includes(baseMarker)
+          filePath.includes(publicMarker) ||
+          filePath.includes(authMarker) ||
+          filePath.includes(signMarker) ||
+          filePath.includes(baseMarker)
         ) {
           let marker = baseMarker
-          if (pathOrUrl.includes(publicMarker)) marker = publicMarker
-          else if (pathOrUrl.includes(authMarker)) marker = authMarker
-          else if (pathOrUrl.includes(signMarker)) marker = signMarker
+          if (filePath.includes(publicMarker)) marker = publicMarker
+          else if (filePath.includes(authMarker)) marker = authMarker
+          else if (filePath.includes(signMarker)) marker = signMarker
 
-          const parts = pathOrUrl.split(marker)[1]
+          const parts = filePath.split(marker)[1]
           if (parts) {
             bucket = parts.split('/')[0]
             let fullPath = parts.substring(bucket.length + 1)
             if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
             filePath = fullPath
           }
-        } else if (pathOrUrl.startsWith('http')) {
-          const res = await fetch(pathOrUrl)
+        } else if (filePath.startsWith('http')) {
+          const res = await fetch(filePath)
           if (!res.ok) throw new Error('Download failed')
           blob = await res.blob()
         } else {
@@ -193,6 +198,10 @@ export function DocumentPreviewDialog({
         }
 
         if (!blob) {
+          while (filePath.startsWith('/')) {
+            filePath = filePath.substring(1)
+          }
+
           let decodedPath = filePath
           try {
             decodedPath = decodeURIComponent(filePath)

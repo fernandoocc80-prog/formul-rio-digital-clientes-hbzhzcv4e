@@ -27,7 +27,7 @@ export const useSignedUrl = (value?: string | null) => {
       setLoading(true)
       try {
         let bucket = 'documents'
-        let filePath = value
+        let filePath = value.trim()
 
         const publicMarker = '/storage/v1/object/public/'
         const authMarker = '/storage/v1/object/authenticated/'
@@ -35,26 +35,26 @@ export const useSignedUrl = (value?: string | null) => {
         const baseMarker = '/storage/v1/object/'
 
         if (
-          value.includes(publicMarker) ||
-          value.includes(authMarker) ||
-          value.includes(signMarker) ||
-          value.includes(baseMarker)
+          filePath.includes(publicMarker) ||
+          filePath.includes(authMarker) ||
+          filePath.includes(signMarker) ||
+          filePath.includes(baseMarker)
         ) {
           let marker = baseMarker
-          if (value.includes(publicMarker)) marker = publicMarker
-          else if (value.includes(authMarker)) marker = authMarker
-          else if (value.includes(signMarker)) marker = signMarker
+          if (filePath.includes(publicMarker)) marker = publicMarker
+          else if (filePath.includes(authMarker)) marker = authMarker
+          else if (filePath.includes(signMarker)) marker = signMarker
 
-          const parts = value.split(marker)[1]
+          const parts = filePath.split(marker)[1]
           if (parts) {
             bucket = parts.split('/')[0]
             let fullPath = parts.substring(bucket.length + 1)
             if (fullPath.includes('?')) fullPath = fullPath.split('?')[0]
             filePath = fullPath
           }
-        } else if (value.startsWith('http')) {
+        } else if (filePath.startsWith('http')) {
           if (isMounted) {
-            setUrl(value)
+            setUrl(filePath)
             setLoading(false)
           }
           return
@@ -62,25 +62,21 @@ export const useSignedUrl = (value?: string | null) => {
           if (filePath.includes('?')) filePath = filePath.split('?')[0]
         }
 
-        let safePath = filePath
+        // Clean up leading slashes to prevent InvalidKey errors
+        while (filePath.startsWith('/')) {
+          filePath = filePath.substring(1)
+        }
+
+        let decodedPath = filePath
         try {
-          safePath = filePath
-            .split('/')
-            .map((s) => {
-              try {
-                return encodeURIComponent(decodeURIComponent(s))
-              } catch {
-                return encodeURIComponent(s)
-              }
-            })
-            .join('/')
+          decodedPath = decodeURIComponent(filePath)
         } catch (e) {
           // ignore
         }
 
-        let { data, error } = await supabase.storage.from(bucket).createSignedUrl(safePath, 3600)
+        let { data, error } = await supabase.storage.from(bucket).createSignedUrl(decodedPath, 3600)
 
-        if (error) {
+        if (error && decodedPath !== filePath) {
           const fallback = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600)
           if (fallback.data) {
             data = fallback.data

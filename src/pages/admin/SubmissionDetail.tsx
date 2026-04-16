@@ -11,29 +11,6 @@ import { supabase } from '@/lib/supabase/client'
 import { AttachmentCard, Attachment } from '@/components/admin/AttachmentCard'
 import { DynamicAnswerValue, SecureSignature } from '@/components/admin/DynamicAnswerComponents'
 
-const encodeSafePath = (rawPath: string | null | undefined) => {
-  if (!rawPath) return rawPath
-
-  const encodeSegment = (segment: string) => {
-    try {
-      return encodeURIComponent(decodeURIComponent(segment))
-    } catch (e) {
-      return encodeURIComponent(segment)
-    }
-  }
-
-  try {
-    if (rawPath.startsWith('http')) {
-      const urlObj = new URL(rawPath)
-      urlObj.pathname = urlObj.pathname.split('/').map(encodeSegment).join('/')
-      return urlObj.toString()
-    }
-    return rawPath.split('/').map(encodeSegment).join('/')
-  } catch (e) {
-    return rawPath
-  }
-}
-
 export default function SubmissionDetail() {
   const { id } = useParams()
   const navigate = useNavigate()
@@ -82,7 +59,7 @@ export default function SubmissionDetail() {
         if (docDef) label = docDef.label
       }
 
-      list.push({ id: file.id, name: cleanName, label, pathOrUrl: encodeSafePath(file.file_path) })
+      list.push({ id: file.id, name: cleanName, label, pathOrUrl: file.file_path?.trim() })
     })
 
     if (submission?.dynamicAnswers) {
@@ -119,7 +96,7 @@ export default function SubmissionDetail() {
                 id: `json-${i}-${Math.random()}`,
                 name: cleanName,
                 label: ans.label || 'Documento',
-                pathOrUrl: encodeSafePath(val),
+                pathOrUrl: val?.trim(),
               })
             }
           }
@@ -159,7 +136,7 @@ export default function SubmissionDetail() {
                 id: `gen-${Math.random()}`,
                 name: cleanName,
                 label: pathLabel || 'Documento',
-                pathOrUrl: encodeSafePath(obj),
+                pathOrUrl: obj?.trim(),
               })
             }
           }
@@ -182,14 +159,14 @@ export default function SubmissionDetail() {
             id: doc.id || `doc-${Math.random()}`,
             name: doc.fileName || (path ? 'Documento Anexado' : 'Pendente'),
             label: doc.label || 'Documento',
-            pathOrUrl: encodeSafePath(path),
+            pathOrUrl: path?.trim(),
           })
         } else {
           const existingIdx = list.findIndex(
             (a) => a.name === doc.fileName || a.label === doc.label,
           )
           if (existingIdx >= 0 && !list[existingIdx].pathOrUrl && path) {
-            list[existingIdx].pathOrUrl = encodeSafePath(path)
+            list[existingIdx].pathOrUrl = path?.trim()
             if (doc.fileName) list[existingIdx].name = doc.fileName
           }
         }
