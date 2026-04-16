@@ -268,11 +268,4 @@ export default function QuickActions() {
                     ))
                   )}
                 </TableBody>
-              </Table>
-            </CardContent>
-          </Card>
-        </TabsContent>
-      </Tabs>
-    </div>
-  )
-}
+              
