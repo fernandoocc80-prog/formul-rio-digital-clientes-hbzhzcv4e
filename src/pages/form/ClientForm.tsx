@@ -205,6 +205,20 @@ export default function ClientForm() {
 
       if (error) throw error
 
+      // Dispara envio de email automático via Edge Function
+      if (company.email) {
+        supabase.functions
+          .invoke('send-confirmation-email', {
+            body: {
+              submissionId: inserted.id,
+              clientName: data.clientName,
+              email: company.email,
+              protocol,
+            },
+          })
+          .catch(console.error)
+      }
+
       try {
         await addSubmission(submissionPayload)
       } catch (e) {
@@ -213,7 +227,8 @@ export default function ClientForm() {
 
       toast({
         title: 'Sucesso!',
-        description: 'Seu formulário foi enviado com sucesso e recebido pela nossa equipe.',
+        description:
+          'Seu formulário foi enviado com sucesso e recebido pela nossa equipe. Um e-mail de confirmação foi enviado.',
       })
       navigate(`/form/${inserted.id}/success`)
     } catch (err: any) {

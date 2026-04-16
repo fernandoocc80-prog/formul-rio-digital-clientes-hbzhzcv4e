@@ -27,6 +27,16 @@ export function DocumentsStep({ documents, onChange }: Props) {
       return
     }
 
+    const MAX_FILE_SIZE = 5 * 1024 * 1024 // 5MB
+    if (file.size > MAX_FILE_SIZE) {
+      toast({
+        title: 'Arquivo muito grande',
+        description: 'O tamanho máximo permitido é de 5MB.',
+        variant: 'destructive',
+      })
+      return
+    }
+
     onChange(
       documents.map((d) =>
         d.id === id ? { ...d, fileName: file.name, uploadedAt: new Date().toISOString(), file } : d,
