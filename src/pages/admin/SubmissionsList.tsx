@@ -102,7 +102,9 @@ export default function SubmissionsList() {
     setDownloading(null)
   }
 
-  const filtered = submissions.filter((s) => {
+  const uniqueSubmissions = Array.from(new Map(submissions.map((s) => [s.id, s])).values())
+
+  const filtered = uniqueSubmissions.filter((s) => {
     const currentStatus = s.status || 'pending'
     if (statusFilter !== 'all' && currentStatus !== statusFilter) return false
     if (typeFilter !== 'all' && s.company?.type !== typeFilter) return false
@@ -199,7 +201,7 @@ export default function SubmissionsList() {
           <div className="flex items-center gap-3">
             <h1 className="text-2xl font-bold">Gestão de Formulários</h1>
             <Badge variant="outline" className="bg-white dark:bg-slate-950 font-mono text-sm px-2">
-              Total: {submissions.length} Processo{submissions.length !== 1 && 's'}
+              Total: {uniqueSubmissions.length} Processo{uniqueSubmissions.length !== 1 && 's'}
             </Badge>
             <div className="hidden sm:block">
               <SyncIndicator />
