@@ -28,23 +28,10 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
     if (!attachment.pathOrUrl) return
     setIsDownloading(true)
     try {
-      let blob: Blob | null = null
+      let downloadUrl = url
       const pathOrUrl = attachment.pathOrUrl
 
-      // 1. If we have a signed URL, try fetching it directly
-      if (url && url.startsWith('http')) {
-        try {
-          const res = await fetch(url)
-          if (res.ok) {
-            blob = await res.blob()
-          }
-        } catch (e) {
-          console.error('Failed to fetch signed url, falling back to storage download', e)
-        }
-      }
-
-      // 2. If still no blob, try parsing path and using Supabase SDK
-      if (!blob) {
+      if (!downloadUrl) {
         let bucket = 'documents'
         let filePath = pathOrUrl
 
@@ -52,17 +39,10 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
         const authMarker = '/storage/v1/object/authenticated/'
         const signMarker = '/storage/v1/object/sign/'
 
-        if (
-          pathOrUrl.includes(publicMarker) ||
-          pathOrUrl.includes(authMarker) ||
-          pathOrUrl.includes(signMarker)
-        ) {
-          const marker = pathOrUrl.includes(publicMarker)
-            ? publicMarker
-            : pathOrUrl.includes(authMarker)
-              ? authMarker
-              : signMarker
-
+        if (pathOrUrl.includes(publicMarker)) {
+          downloadUrl = pathOrUrl
+        } else if (pathOrUrl.includes(authMarker) || pathOrUrl.includes(signMarker)) {
+          const marker = pathOrUrl.includes(authMarker) ? authMarker : signMarker
           const parts = pathOrUrl.split(marker)[1]
           if (parts) {
             bucket = parts.split('/')[0]
@@ -71,14 +51,12 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
             filePath = fullPath
           }
         } else if (pathOrUrl.startsWith('http')) {
-          const res = await fetch(pathOrUrl)
-          if (!res.ok) throw new Error('Download failed')
-          blob = await res.blob()
+          downloadUrl = pathOrUrl
         } else {
           if (filePath.includes('?')) filePath = filePath.split('?')[0]
         }
 
-        if (!blob) {
+        if (!downloadUrl) {
           let decodedPath = filePath
           try {
             decodedPath = decodeURIComponent(filePath)
@@ -86,27 +64,47 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
             // ignore
           }
 
-          let { data, error } = await supabase.storage.from(bucket).download(decodedPath)
+          let { data } = await supabase.storage.from(bucket).createSignedUrl(decodedPath, 3600)
 
-          if (error && decodedPath !== filePath) {
-            const fallback = await supabase.storage.from(bucket).download(filePath)
-            data = fallback.data
-            error = fallback.error
+          if (!data && decodedPath !== filePath) {
+            const fallback = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600)
+            if (fallback.data) {
+              data = fallback.data
+            }
           }
 
-          if (error) throw error
-          if (data) blob = data
+          if (data?.signedUrl) {
+            downloadUrl = data.signedUrl
+          }
         }
       }
-      if (blob) {
-        const objectUrl = URL.createObjectURL(blob)
-        const a = document.createElement('a')
-        a.href = objectUrl
-        a.download = attachment.name || 'documento'
-        document.body.appendChild(a)
-        a.click()
-        document.body.removeChild(a)
-        setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+
+      if (downloadUrl) {
+        try {
+          const res = await fetch(downloadUrl)
+          if (!res.ok) throw new Error('Fetch failed')
+          const blob = await res.blob()
+          const objectUrl = URL.createObjectURL(blob)
+          const a = document.createElement('a')
+          a.href = objectUrl
+          a.download = attachment.name || 'documento'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+          setTimeout(() => URL.revokeObjectURL(objectUrl), 1000)
+        } catch (error) {
+          console.warn('Fetch failed due to CORS or network, falling back to direct link.', error)
+          const a = document.createElement('a')
+          a.href = downloadUrl
+          a.download = attachment.name || 'documento'
+          a.target = '_blank'
+          a.rel = 'noopener noreferrer'
+          document.body.appendChild(a)
+          a.click()
+          document.body.removeChild(a)
+        }
+      } else {
+        throw new Error('Não foi possível obter a URL do arquivo')
       }
     } catch (e) {
       toast({

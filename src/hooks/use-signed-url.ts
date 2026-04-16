@@ -13,7 +13,10 @@ export const useSignedUrl = (value?: string | null) => {
     const getUrl = async () => {
       if (!value) return
 
-      if (value.startsWith('http') && !value.includes('/storage/v1/object/')) {
+      if (
+        value.includes('/storage/v1/object/public/') ||
+        (value.startsWith('http') && !value.includes('/storage/v1/object/'))
+      ) {
         if (isMounted) {
           setUrl(value)
           setLoading(false)
@@ -23,14 +26,6 @@ export const useSignedUrl = (value?: string | null) => {
 
       setLoading(true)
       try {
-        const {
-          data: { session },
-        } = await supabase.auth.getSession()
-        if (!session) {
-          navigate('/login')
-          return
-        }
-
         let bucket = 'documents'
         let filePath = value
 
