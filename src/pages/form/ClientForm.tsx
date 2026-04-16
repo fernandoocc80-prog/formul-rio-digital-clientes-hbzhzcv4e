@@ -169,13 +169,35 @@ export default function ClientForm() {
   const handleSubmit = async () => {
     setIsSubmitting(true)
     try {
+      // Faz o upload dos arquivos para o storage do Supabase antes de salvar o form
+      const uploadedDocuments = await Promise.all(
+        documents.map(async (doc) => {
+          if (doc.file) {
+            const fileName = doc.fileName || doc.file.name
+            const { error: uploadError } = await supabase.storage
+              .from('documents')
+              .upload(fileName, doc.file, { upsert: true })
+
+            if (uploadError) {
+              console.error('Erro no upload do documento:', uploadError)
+              throw new Error(`Erro ao fazer upload do documento: ${doc.label}`)
+            }
+
+            // Remove o objeto File para não quebrar a serialização JSON no banco
+            const { file, ...docWithoutFile } = doc
+            return docWithoutFile
+          }
+          return doc
+        }),
+      )
+
       const data = {
         clientName: clientName || company.tradeName || company.suggestedName1 || 'Cliente Novo',
         status: 'pending' as const,
         company,
         partners: company.type === 'mei' ? [] : partners,
         activity,
-        documents,
+        documents: uploadedDocuments,
         signature,
       }
 

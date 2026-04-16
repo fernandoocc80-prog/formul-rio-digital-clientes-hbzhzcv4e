@@ -37,9 +37,35 @@ export function DocumentsStep({ documents, onChange }: Props) {
       return
     }
 
+    const sanitizeFileName = (name: string) => {
+      const parts = name.split('.')
+      const ext = parts.pop() || ''
+      const base = parts.join('.')
+
+      const sanitizedBase = base
+        .normalize('NFD')
+        .replace(/[\u0300-\u036f]/g, '')
+        .replace(/[^a-zA-Z0-9]/g, '_')
+        .replace(/_+/g, '_')
+        .replace(/^_|_$/g, '')
+        .toLowerCase()
+
+      return `${sanitizedBase}_${Date.now()}.${ext.toLowerCase()}`
+    }
+
+    const sanitizedName = sanitizeFileName(file.name)
+    const renamedFile = new File([file], sanitizedName, { type: file.type })
+
     onChange(
       documents.map((d) =>
-        d.id === id ? { ...d, fileName: file.name, uploadedAt: new Date().toISOString(), file } : d,
+        d.id === id
+          ? {
+              ...d,
+              fileName: renamedFile.name,
+              uploadedAt: new Date().toISOString(),
+              file: renamedFile,
+            }
+          : d,
       ),
     )
   }
