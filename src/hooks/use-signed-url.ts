@@ -32,17 +32,18 @@ export const useSignedUrl = (value?: string | null) => {
         const publicMarker = '/storage/v1/object/public/'
         const authMarker = '/storage/v1/object/authenticated/'
         const signMarker = '/storage/v1/object/sign/'
+        const baseMarker = '/storage/v1/object/'
 
         if (
           value.includes(publicMarker) ||
           value.includes(authMarker) ||
-          value.includes(signMarker)
+          value.includes(signMarker) ||
+          value.includes(baseMarker)
         ) {
-          const marker = value.includes(publicMarker)
-            ? publicMarker
-            : value.includes(authMarker)
-              ? authMarker
-              : signMarker
+          let marker = baseMarker
+          if (value.includes(publicMarker)) marker = publicMarker
+          else if (value.includes(authMarker)) marker = authMarker
+          else if (value.includes(signMarker)) marker = signMarker
 
           const parts = value.split(marker)[1]
           if (parts) {

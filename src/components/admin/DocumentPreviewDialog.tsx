@@ -62,17 +62,18 @@ export function DocumentPreviewDialog({
         const publicMarker = '/storage/v1/object/public/'
         const authMarker = '/storage/v1/object/authenticated/'
         const signMarker = '/storage/v1/object/sign/'
+        const baseMarker = '/storage/v1/object/'
 
         if (
           pathOrUrl.includes(publicMarker) ||
           pathOrUrl.includes(authMarker) ||
-          pathOrUrl.includes(signMarker)
+          pathOrUrl.includes(signMarker) ||
+          pathOrUrl.includes(baseMarker)
         ) {
-          const marker = pathOrUrl.includes(publicMarker)
-            ? publicMarker
-            : pathOrUrl.includes(authMarker)
-              ? authMarker
-              : signMarker
+          let marker = baseMarker
+          if (pathOrUrl.includes(publicMarker)) marker = publicMarker
+          else if (pathOrUrl.includes(authMarker)) marker = authMarker
+          else if (pathOrUrl.includes(signMarker)) marker = signMarker
 
           const parts = pathOrUrl.split(marker)[1]
           if (parts) {
@@ -163,17 +164,18 @@ export function DocumentPreviewDialog({
         const publicMarker = '/storage/v1/object/public/'
         const authMarker = '/storage/v1/object/authenticated/'
         const signMarker = '/storage/v1/object/sign/'
+        const baseMarker = '/storage/v1/object/'
 
         if (
           pathOrUrl.includes(publicMarker) ||
           pathOrUrl.includes(authMarker) ||
-          pathOrUrl.includes(signMarker)
+          pathOrUrl.includes(signMarker) ||
+          pathOrUrl.includes(baseMarker)
         ) {
-          const marker = pathOrUrl.includes(publicMarker)
-            ? publicMarker
-            : pathOrUrl.includes(authMarker)
-              ? authMarker
-              : signMarker
+          let marker = baseMarker
+          if (pathOrUrl.includes(publicMarker)) marker = publicMarker
+          else if (pathOrUrl.includes(authMarker)) marker = authMarker
+          else if (pathOrUrl.includes(signMarker)) marker = signMarker
 
           const parts = pathOrUrl.split(marker)[1]
           if (parts) {

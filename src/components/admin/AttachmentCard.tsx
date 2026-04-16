@@ -38,11 +38,19 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
         const publicMarker = '/storage/v1/object/public/'
         const authMarker = '/storage/v1/object/authenticated/'
         const signMarker = '/storage/v1/object/sign/'
+        const baseMarker = '/storage/v1/object/'
 
         if (pathOrUrl.includes(publicMarker)) {
           downloadUrl = pathOrUrl
-        } else if (pathOrUrl.includes(authMarker) || pathOrUrl.includes(signMarker)) {
-          const marker = pathOrUrl.includes(authMarker) ? authMarker : signMarker
+        } else if (
+          pathOrUrl.includes(authMarker) ||
+          pathOrUrl.includes(signMarker) ||
+          pathOrUrl.includes(baseMarker)
+        ) {
+          let marker = baseMarker
+          if (pathOrUrl.includes(authMarker)) marker = authMarker
+          else if (pathOrUrl.includes(signMarker)) marker = signMarker
+
           const parts = pathOrUrl.split(marker)[1]
           if (parts) {
             bucket = parts.split('/')[0]
