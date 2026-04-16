@@ -65,16 +65,25 @@ export function AttachmentCard({ attachment }: { attachment: Attachment }) {
         }
 
         if (!downloadUrl) {
-          let decodedPath = filePath
+          let safePath = filePath
           try {
-            decodedPath = decodeURIComponent(filePath)
+            safePath = filePath
+              .split('/')
+              .map((s) => {
+                try {
+                  return encodeURIComponent(decodeURIComponent(s))
+                } catch {
+                  return encodeURIComponent(s)
+                }
+              })
+              .join('/')
           } catch (e) {
             // ignore
           }
 
-          let { data } = await supabase.storage.from(bucket).createSignedUrl(decodedPath, 3600)
+          let { data } = await supabase.storage.from(bucket).createSignedUrl(safePath, 3600)
 
-          if (!data && decodedPath !== filePath) {
+          if (!data) {
             const fallback = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600)
             if (fallback.data) {
               data = fallback.data

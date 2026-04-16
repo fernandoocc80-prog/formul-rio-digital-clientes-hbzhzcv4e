@@ -62,18 +62,29 @@ export const useSignedUrl = (value?: string | null) => {
           if (filePath.includes('?')) filePath = filePath.split('?')[0]
         }
 
-        let decodedPath = filePath
+        let safePath = filePath
         try {
-          decodedPath = decodeURIComponent(filePath)
+          safePath = filePath
+            .split('/')
+            .map((s) => {
+              try {
+                return encodeURIComponent(decodeURIComponent(s))
+              } catch {
+                return encodeURIComponent(s)
+              }
+            })
+            .join('/')
         } catch (e) {
           // ignore
         }
 
-        let { data, error } = await supabase.storage.from(bucket).createSignedUrl(decodedPath, 3600)
+        let { data, error } = await supabase.storage.from(bucket).createSignedUrl(safePath, 3600)
 
-        if (error && decodedPath !== filePath) {
+        if (error) {
           const fallback = await supabase.storage.from(bucket).createSignedUrl(filePath, 3600)
-          data = fallback.data
+          if (fallback.data) {
+            data = fallback.data
+          }
         }
 
         if (data?.signedUrl && isMounted) {
