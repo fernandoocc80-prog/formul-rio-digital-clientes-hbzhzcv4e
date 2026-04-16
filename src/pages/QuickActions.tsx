@@ -63,7 +63,9 @@ export default function QuickActions() {
     setDownloading(null)
   }
 
-  const filteredSubmissions = submissions.filter((s) => {
+  const uniqueSubmissions = Array.from(new Map(submissions.map((item) => [item.id, item])).values())
+
+  const filteredSubmissions = uniqueSubmissions.filter((s) => {
     if (searchQuery) {
       const query = searchQuery.toLowerCase()
       const companyName = (s.company?.tradeName || s.company?.suggestedName1 || '').toLowerCase()

@@ -1,12 +1,13 @@
-import "jsr:@supabase/functions-js/edge-runtime.d.ts"
-import { serve } from "https://deno.land/std@0.168.0/http/server.ts"
-import { createClient } from "https://esm.sh/@supabase/supabase-js@2.39.3"
-import { PDFDocument, StandardFonts, rgb } from "https://esm.sh/pdf-lib@1.17.1"
+import 'jsr:@supabase/functions-js/edge-runtime.d.ts'
+import { serve } from 'https://deno.land/std@0.168.0/http/server.ts'
+import { createClient } from 'https://esm.sh/@supabase/supabase-js@2.39.3'
+import { PDFDocument, StandardFonts, rgb } from 'https://esm.sh/pdf-lib@1.17.1'
 
 const corsHeaders = {
   'Access-Control-Allow-Origin': '*',
   'Access-Control-Allow-Methods': 'GET, POST, OPTIONS',
-  'Access-Control-Allow-Headers': 'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
+  'Access-Control-Allow-Headers':
+    'authorization, x-client-info, x-supabase-client-platform, apikey, content-type',
 }
 
 serve(async (req: Request) => {
@@ -36,12 +37,12 @@ serve(async (req: Request) => {
     const font = await pdfDoc.embedFont(StandardFonts.Helvetica)
     const boldFont = await pdfDoc.embedFont(StandardFonts.HelveticaBold)
     const page = pdfDoc.addPage([595.28, 841.89])
-    
+
     let y = 800
     const x = 50
 
     const drawText = (text: string, isBold = false, size = 12) => {
-      page.drawText(text || '', { x, y, size, font: isBold ? boldFont : font, color: rgb(0,0,0) })
+      page.drawText(text || '', { x, y, size, font: isBold ? boldFont : font, color: rgb(0, 0, 0) })
       y -= size + 10
     }
 
@@ -50,7 +51,7 @@ serve(async (req: Request) => {
     drawText(`Protocolo: ${data.protocol}`, true, 12)
     drawText(`Cliente: ${data.clientName}`)
     drawText(`Data: ${new Date(sub.created_at).toLocaleDateString('pt-BR')}`)
-    
+
     y -= 20
     drawText('1. Dados da Empresa', true, 14)
     drawText(`Tipo Societário: ${data.company?.type || '-'}`)
@@ -58,12 +59,12 @@ serve(async (req: Request) => {
     drawText(`Razão Social 1: ${data.company?.suggestedName1 || '-'}`)
     drawText(`E-mail: ${data.company?.email || '-'}`)
     drawText(`Telefone: ${data.company?.phone || '-'}`)
-    
+
     y -= 20
     drawText('2. Atividades e Localização', true, 14)
     drawText(`CNAE Principal: ${data.activity?.mainCnae || '-'}`)
     drawText(`Endereço: ${data.activity?.businessAddress || '-'}`)
-    
+
     y -= 20
     drawText('3. Quadro Societário', true, 14)
     if (data.partners && data.partners.length > 0) {
@@ -87,13 +88,12 @@ serve(async (req: Request) => {
 
     await supabase.from('generated_documents').insert({
       submission_id: submissionId,
-      file_path: filePath
+      file_path: filePath,
     })
 
     return new Response(JSON.stringify({ success: true, filePath }), {
       headers: { ...corsHeaders, 'Content-Type': 'application/json' },
     })
-
   } catch (error: any) {
     return new Response(JSON.stringify({ error: error.message }), {
       status: 400,
@@ -101,4 +101,3 @@ serve(async (req: Request) => {
     })
   }
 })
-
