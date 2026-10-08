@@ -17,12 +17,11 @@ export default function AdminLayout() {
 
   useEffect(() => {
     if (currentUser) {
-      clearCache()
       syncSubmissions({ force: true, background: true, skipCache: true }).catch(() => {
         /* ignore */
       })
     }
-  }, [location.pathname, currentUser, syncSubmissions, clearCache])
+  }, [location.pathname, currentUser, syncSubmissions])
 
   const playAlertSound = useCallback(() => {
     try {
@@ -90,7 +89,7 @@ export default function AdminLayout() {
 
   const handleLogout = () => {
     logout()
-    navigate('/login')
+    navigate('/login', { replace: true })
     toast({
       title: 'Sessão encerrada',
       description: 'Você saiu com sucesso.',

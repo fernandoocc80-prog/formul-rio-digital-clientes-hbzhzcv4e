@@ -19,22 +19,20 @@ export default function Login() {
     'destructive',
   )
 
-  const { signIn } = useAuth()
-  const { clearCache, users } = useAppStore()
+  const { user, loading: authLoading, signIn } = useAuth()
+  const { users } = useAppStore()
   const navigate = useNavigate()
   const location = useLocation()
   const { toast } = useToast()
 
-  const from = location.state?.from?.pathname || '/'
+  const from = location.state?.from?.pathname || '/admin'
 
+  // If already authenticated, redirect immediately away from login
   useEffect(() => {
-    clearCache()
-    try {
-      sessionStorage.clear()
-    } catch (e) {
-      // ignore
+    if (!authLoading && user) {
+      navigate(from, { replace: true })
     }
-  }, [clearCache])
+  }, [user, authLoading, navigate, from])
 
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault()
@@ -266,48 +264,51 @@ export default function Login() {
             </Button>
           </form>
 
-          {users.length === 0 ? (
-            <div className="mt-6 text-center text-sm">
-              <p className="text-muted-foreground mb-2">Nenhum usuário cadastrado.</p>
-              <Link to="/register" className="text-blue-600 hover:underline font-medium">
-                Primeiro acesso? Crie a conta de administrador principal.
-              </Link>
+          <div className="mt-6 text-center text-xs text-muted-foreground bg-slate-100/80 p-3 rounded-md border border-slate-200">
+            <p className="font-semibold mb-2 text-slate-700">Acesso Administrativo:</p>
+            <div
+              className={`flex justify-between items-center bg-white px-2.5 py-2 rounded-sm border border-slate-200 shadow-sm transition-colors ${
+                isLoading ? 'opacity-50 cursor-not-allowed' : 'hover:border-blue-300 cursor-pointer'
+              }`}
+              onClick={() => {
+                if (!isLoading) {
+                  setEmail('fernando@organizacaocastro.com.br')
+                  setPassword('123456mg')
+                }
+              }}
+              title="Clique para preencher credenciais administrativas"
+            >
+              <span className="font-mono text-slate-800 truncate mr-2 text-[11px]">
+                fernando@organizacaocastro.com.br
+              </span>
+              <span className="px-1.5 py-0.5 rounded text-[10px] uppercase font-bold bg-blue-100 text-blue-700 shrink-0">
+                Admin
+              </span>
             </div>
-          ) : (
-            <div className="mt-8 text-center text-xs text-muted-foreground bg-slate-100/80 p-3 rounded-md border border-slate-200">
-              <p className="font-semibold mb-2 text-slate-700">Contas disponíveis para teste:</p>
-              <div className="space-y-2 max-h-[140px] overflow-y-auto pr-1">
-                {users.slice(0, 4).map((u) => (
-                  <div
-                    key={u.id}
-                    className={`flex justify-between items-center bg-white px-2.5 py-1.5 rounded-sm border border-slate-200 shadow-sm transition-colors ${
-                      isLoading
-                        ? 'opacity-50 cursor-not-allowed'
-                        : 'hover:border-blue-300 cursor-pointer'
-                    }`}
-                    onClick={() => !isLoading && handleQuickFill(u.email)}
-                    title="Clique para preencher o e-mail"
-                  >
-                    <span className="font-mono text-slate-800 truncate mr-2" title={u.email}>
-                      {u.email}
-                    </span>
-                    <span
-                      className={`px-1.5 py-0.5 rounded text-[10px] uppercase font-bold shrink-0 ${
-                        u.role === 'colaborador'
-                          ? 'bg-amber-100 text-amber-700'
-                          : 'bg-blue-100 text-blue-700'
-                      }`}
-                    >
-                      {u.role === 'colaborador' ? 'Colab' : 'Admin'}
-                    </span>
-                  </div>
-                ))}
-              </div>
-              <p className="mt-3 text-[10px] text-slate-500">
-                Selecione uma conta acima para testar com a senha <strong>123456</strong>.
-              </p>
-            </div>
-          )}
+            {users.length > 0 &&
+              users.some((u) => u.email !== 'fernando@organizacaocastro.com.br') && (
+                <div className="mt-2 space-y-1.5 max-h-[90px] overflow-y-auto pr-1">
+                  {users
+                    .filter((u) => u.email !== 'fernando@organizacaocastro.com.br')
+                    .slice(0, 2)
+                    .map((u) => (
+                      <div
+                        key={u.id}
+                        className="flex justify-between items-center bg-white px-2 py-1 rounded-sm border border-slate-200 text-[11px] cursor-pointer hover:border-blue-300"
+                        onClick={() => !isLoading && handleQuickFill(u.email)}
+                      >
+                        <span className="font-mono text-slate-700 truncate mr-1">{u.email}</span>
+                        <span className="text-[10px] uppercase text-muted-foreground font-semibold">
+                          {u.role === 'colaborador' ? 'Colab' : 'Admin'}
+                        </span>
+                      </div>
+                    ))}
+                </div>
+              )}
+            <p className="mt-2 text-[10px] text-slate-500">
+              Clique acima para preencher os dados de acesso administrativo.
+            </p>
+          </div>
         </CardContent>
       </Card>
     </div>

@@ -12,6 +12,7 @@ export default function Welcome() {
   const [progressWidth, setProgressWidth] = useState(0)
 
   const from = location.state?.from || '/'
+  const displayName = currentUser?.name?.split(' ')[0] || 'Usuário'
 
   useEffect(() => {
     // Start progress bar animation
@@ -21,11 +22,11 @@ export default function Welcome() {
 
     const buttonTimer = setTimeout(() => {
       setShowButton(true)
-    }, 1500)
+    }, 1200)
 
     const redirectTimer = setTimeout(() => {
       navigate(from, { replace: true })
-    }, 3500)
+    }, 2500)
 
     return () => {
       clearTimeout(progressTimer)
@@ -33,8 +34,6 @@ export default function Welcome() {
       clearTimeout(redirectTimer)
     }
   }, [navigate, from])
-
-  if (!currentUser) return null
 
   return (
     <div className="min-h-screen flex flex-col items-center justify-center p-4 bg-primary text-primary-foreground relative overflow-hidden">
@@ -49,7 +48,7 @@ export default function Welcome() {
 
         <h1 className="text-3xl md:text-5xl font-bold mb-4 text-center flex flex-wrap items-center justify-center gap-3">
           Bem-vindo(a) de volta,
-          <span className="block w-full sm:w-auto">{currentUser.name.split(' ')[0]}!</span>
+          <span className="block w-full sm:w-auto">{displayName}!</span>
           <Sparkles className="w-8 h-8 text-yellow-300 animate-pulse hidden sm:block" />
         </h1>
 

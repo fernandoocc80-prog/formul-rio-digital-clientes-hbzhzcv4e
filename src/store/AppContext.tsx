@@ -102,33 +102,73 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
   })
 
   useEffect(() => {
+    let active = true
+
     if (user) {
+      // Default fallback profile immediately so currentUser is never null for an authenticated user
+      const fallbackName =
+        user.user_metadata?.name ||
+        user.user_metadata?.full_name ||
+        user.email?.split('@')[0] ||
+        'Usuário'
+
+      setCurrentUser((prev) => {
+        if (prev && prev.id === user.id) return prev
+        return {
+          id: user.id,
+          name: fallbackName,
+          email: user.email || '',
+          role: 'admin',
+          passwordHash: '',
+          createdAt: user.created_at || new Date().toISOString(),
+        }
+      })
+
+      // Fetch profile data from Supabase
       supabase
         .from('profiles')
         .select('*')
         .eq('id', user.id)
-        .single()
-        .then(({ data }) => {
-          if (data) {
+        .maybeSingle()
+        .then(({ data, error }) => {
+          if (!active) return
+          if (data && !error) {
             setCurrentUser({
               id: data.id,
-              name: data.name,
-              email: data.email,
-              role: data.role as any,
+              name: data.name || fallbackName,
+              email: data.email || user.email || '',
+              role: (data.role as any) || 'admin',
               passwordHash: '',
               createdAt: data.created_at,
             })
+          } else if (error) {
+            console.warn('Erro ao carregar perfil do banco, usando perfil autenticado:', error)
           }
+        })
+        .catch((err) => {
+          console.warn('Exceção ao consultar tabela de perfis:', err)
         })
     } else {
       setCurrentUser(null)
       setSubmissions([])
     }
+
+    return () => {
+      active = false
+    }
   }, [user])
 
   const clearCache = useCallback(() => {
+    // Only clear non-essential cache keys, never tamper with Supabase session storage
     try {
-      sessionStorage.clear()
+      const keysToRemove: string[] = []
+      for (let i = 0; i < sessionStorage.length; i++) {
+        const key = sessionStorage.key(i)
+        if (key && !key.startsWith('sb-') && !key.includes('supabase')) {
+          keysToRemove.push(key)
+        }
+      }
+      keysToRemove.forEach((k) => sessionStorage.removeItem(k))
     } catch (e) {
       // ignore
     }
@@ -308,7 +348,8 @@ export const AppProvider = ({ children }: { children: ReactNode }) => {
         data: { session },
       } = await supabase.auth.getSession()
       if (!session) {
-        window.location.href = '/login'
+        // Do not force harsh window.location reload if not in session, just fallback
+        downloadSubmissionPDF(sub)
         return
       }
 
